@@ -92,3 +92,4 @@ taskSchema.index({ dueDate: 1, status: 1 });
 taskSchema.index({ department: 1 });
 
 module.exports = mongoose.model('Task', taskSchema);
+

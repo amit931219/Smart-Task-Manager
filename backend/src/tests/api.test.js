@@ -105,3 +105,4 @@ describe('Smart Task Manager API Suite', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 });
+

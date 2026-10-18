@@ -29,3 +29,4 @@ router.get('/me', protect, getMe);
 router.get('/users', protect, getAllUsers);
 
 module.exports = router;
+

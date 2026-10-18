@@ -49,6 +49,37 @@ const getOAuth2Client = () => {
   return oAuth2Client;
 };
 
+// Generate Google Consent URL
+const generateAuthUrl = () => {
+  const oAuth2Client = getOAuth2Client();
+  if (!oAuth2Client) {
+    throw new Error('GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET must be set in backend/.env first.');
+  }
+
+  const scopes = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/userinfo.email',
+  ];
+
+  return oAuth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: scopes,
+  });
+};
+
+// Exchange auth code for tokens
+const getTokensFromCode = async (code) => {
+  const oAuth2Client = getOAuth2Client();
+  if (!oAuth2Client) {
+    throw new Error('OAuth2 client not initialized');
+  }
+
+  const { tokens } = await oAuth2Client.getToken(code);
+  return tokens;
+};
+
 // Helper: Decode Base64 from Gmail message payload
 const decodeBase64Payload = (data) => {
   if (!data) return '';
@@ -208,7 +239,10 @@ const simulateIncomingEmail = async ({ from, subject, body }) => {
 
 module.exports = {
   getOAuth2Client,
+  generateAuthUrl,
+  getTokensFromCode,
   syncGmailInbox,
   simulateIncomingEmail,
   processEmailMessage,
 };
+

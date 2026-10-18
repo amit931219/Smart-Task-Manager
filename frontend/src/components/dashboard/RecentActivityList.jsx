@@ -63,3 +63,4 @@ const RecentActivityList = ({ activities = [] }) => {
 };
 
 export default RecentActivityList;
+

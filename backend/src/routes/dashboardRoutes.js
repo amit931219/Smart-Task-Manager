@@ -9,3 +9,4 @@ router.use(protect);
 router.get('/', getDashboardMetrics);
 
 module.exports = router;
+

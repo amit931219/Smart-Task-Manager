@@ -218,6 +218,80 @@ const getStatus = async (req, res, next) => {
   }
 };
 
+// @desc    Get Google OAuth Authorization URL
+// @route   GET /api/gmail/auth-url
+// @access  Public / Private
+const getAuthUrl = (req, res, next) => {
+  try {
+    const url = gmailService.generateAuthUrl();
+    res.json({ success: true, url });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    OAuth2 Callback Handler from Google
+// @route   GET /api/gmail/oauth2callback
+// @access  Public
+const oauth2Callback = async (req, res, next) => {
+  try {
+    const { code, error } = req.query;
+    if (error) {
+      return res.status(400).send(`<h3>Google OAuth Error: ${error}</h3>`);
+    }
+    if (!code) {
+      return res.status(400).send('<h3>Authorization code missing.</h3>');
+    }
+
+    const tokens = await gmailService.getTokensFromCode(code);
+    const refreshToken = tokens.refresh_token;
+
+    if (refreshToken) {
+      process.env.GMAIL_REFRESH_TOKEN = refreshToken;
+
+      // Update backend/.env file so it persists
+      const fs = require('fs');
+      const path = require('path');
+      const envPath = path.resolve(__dirname, '../../.env');
+      if (fs.existsSync(envPath)) {
+        let envContent = fs.readFileSync(envPath, 'utf8');
+        if (envContent.includes('GMAIL_REFRESH_TOKEN=')) {
+          envContent = envContent.replace(/GMAIL_REFRESH_TOKEN=.*$/m, `GMAIL_REFRESH_TOKEN=${refreshToken}`);
+        } else {
+          envContent += `\nGMAIL_REFRESH_TOKEN=${refreshToken}`;
+        }
+        fs.writeFileSync(envPath, envContent, 'utf8');
+      }
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Gmail Connected - Smart Task Manager</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 480px; text-align: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+            h2 { color: #38bdf8; margin-top: 0; }
+            p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+            .btn { display: inline-block; background: #2563eb; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; margin-top: 16px; }
+            .btn:hover { background: #1d4ed8; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h2>🎉 Gmail Connected Successfully!</h2>
+            <p>Your Google account has been authorized. Smart Task Manager can now fetch real unread emails and convert them into draft tasks automatically.</p>
+            <a href="http://localhost:5173/gmail" class="btn">Return to Task Manager</a>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send(`<h3>Failed to complete OAuth token exchange: ${error.message}</h3>`);
+  }
+};
+
 module.exports = {
   syncInbox,
   simulateEmail,
@@ -225,4 +299,7 @@ module.exports = {
   approveDraft,
   rejectDraft,
   getStatus,
+  getAuthUrl,
+  oauth2Callback,
 };
+

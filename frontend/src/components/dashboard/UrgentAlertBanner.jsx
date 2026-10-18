@@ -88,3 +88,4 @@ const UrgentAlertBanner = ({ urgentTasks = [], onRefresh }) => {
 };
 
 export default UrgentAlertBanner;
+

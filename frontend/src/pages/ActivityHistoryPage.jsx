@@ -193,3 +193,4 @@ const ActivityHistoryPage = () => {
 };
 
 export default ActivityHistoryPage;
+

@@ -145,6 +145,30 @@ const GmailSyncPage = () => {
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto">
+          {!statusInfo?.isOAuthConnected ? (
+            <button
+              onClick={async () => {
+                try {
+                  const res = await api.get('/gmail/auth-url');
+                  if (res.data?.url) {
+                    window.open(res.data.url, '_blank');
+                  }
+                } catch (err) {
+                  alert(
+                    err.response?.data?.message ||
+                      'Please set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET in backend/.env first!'
+                  );
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
+            >
+              <span>Connect Real Gmail</span>
+            </button>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+              Live Gmail Connected
+            </span>
+          )}
           <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-semibold">
             Mode: {statusInfo?.mode || 'Interactive Simulator'}
           </span>
@@ -247,3 +271,4 @@ const GmailSyncPage = () => {
 };
 
 export default GmailSyncPage;
+

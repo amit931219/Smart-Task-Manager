@@ -40,3 +40,4 @@ const notificationSchema = new mongoose.Schema(
 notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);
+

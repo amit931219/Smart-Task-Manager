@@ -9,3 +9,4 @@ router.use(protect);
 router.get('/', getActivityLogs);
 
 module.exports = router;
+

@@ -125,3 +125,4 @@ const ChartsSection = ({ statusData = [], departmentData = [], priorityData = []
 };
 
 export default ChartsSection;
+

@@ -158,3 +158,4 @@ const SimulateEmailModal = ({ isOpen, onClose, onEmailReceived }) => {
 };
 
 export default SimulateEmailModal;
+

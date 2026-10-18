@@ -270,3 +270,4 @@ const DraftReviewCard = ({ draft, users = [], onApproved, onRejected }) => {
 };
 
 export default DraftReviewCard;
+

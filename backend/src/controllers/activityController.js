@@ -35,3 +35,4 @@ const getActivityLogs = async (req, res, next) => {
 module.exports = {
   getActivityLogs,
 };
+

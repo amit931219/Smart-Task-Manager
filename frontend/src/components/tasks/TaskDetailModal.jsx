@@ -256,3 +256,4 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
 };
 
 export default TaskDetailModal;
+

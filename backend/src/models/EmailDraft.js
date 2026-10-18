@@ -84,3 +84,4 @@ const emailDraftSchema = new mongoose.Schema(
 emailDraftSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('EmailDraft', emailDraftSchema);
+

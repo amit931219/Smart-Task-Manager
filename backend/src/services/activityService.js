@@ -19,3 +19,4 @@ const logActivity = async ({ user, task, action, details, metadata = {} }) => {
 module.exports = {
   logActivity,
 };
+
