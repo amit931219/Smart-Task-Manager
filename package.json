@@ -1,0 +1,27 @@
+{
+  "name": "smart-task-manager",
+  "version": "1.0.0",
+  "description": "Smart Task Manager with Gmail Integration and AI Features",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "seed": "npm run seed --prefix backend",
+    "test": "npm run test --prefix backend",
+    "build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "task-manager",
+    "gmail-api",
+    "ai",
+    "mern",
+    "react",
+    "node",
+    "express",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC"
+}
