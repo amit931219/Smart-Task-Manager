@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const EmailDraft = require('../models/EmailDraft');
 const Task = require('../models/Task');
 const User = require('../models/User');
