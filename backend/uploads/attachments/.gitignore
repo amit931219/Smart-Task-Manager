@@ -1,0 +1,6 @@
+# Ignore all downloaded user email attachments for privacy
+*
+# Keep sample files and gitkeep
+!.gitignore
+!sample_*.pdf
+!*.gitkeep

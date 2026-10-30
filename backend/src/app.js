@@ -17,10 +17,14 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
-// Security middleware (allow cross-origin resources for attachments/uploads)
+// Security middleware (allow viewing and downloading attachments)
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+    contentSecurityPolicy: false,
+    xDownloadOptions: false,
+    xFrameOptions: false,
   })
 );
 

@@ -398,9 +398,51 @@ const downloadAttachment = async (req, res, next) => {
     const downloadName = req.query.name || safeFilename;
     const isDownload = req.query.download === 'true' || req.query.dl === '1';
 
+    // Clear restrictive headers that block browser viewing or downloading
+    res.removeHeader('X-Frame-Options');
+    res.removeHeader('X-Download-Options');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; object-src * data: blob:;"
+    );
+
+    const ext = path.extname(safeFilename).toLowerCase();
+    const mimeTypes = {
+      '.pdf': 'application/pdf',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.svg': 'image/svg+xml',
+      '.txt': 'text/plain',
+      '.html': 'text/html',
+      '.csv': 'text/csv',
+      '.json': 'application/json',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc': 'application/msword',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.xls': 'application/vnd.ms-excel',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.zip': 'application/zip',
+    };
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+
     if (isDownload) {
-      return res.download(filePath, downloadName);
+      const cleanDownloadName = downloadName.replace(/["'\r\n]/g, '_');
+      const encodedName = encodeURIComponent(downloadName);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${cleanDownloadName}"; filename*=UTF-8''${encodedName}`
+      );
+      const fileStream = fs.createReadStream(filePath);
+      return fileStream.pipe(res);
     } else {
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${downloadName.replace(/["'\r\n]/g, '_')}"`);
       return res.sendFile(filePath);
     }
   } catch (err) {
