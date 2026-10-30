@@ -104,7 +104,10 @@ const createTask = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Assignee user not found' });
     }
 
+    const taskId = await Task.generateNextTaskId();
+
     const task = await Task.create({
+      taskId,
       title,
       description,
       priority: priority || 'medium',

@@ -97,13 +97,34 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
-// Auto-assign human-readable Task ID (e.g. TASK-2026-00042) and compute progress
+// Static helper to generate guaranteed collision-free unique Task ID (e.g. TASK-2026-00042)
+taskSchema.statics.generateNextTaskId = async function () {
+  const year = new Date().getFullYear();
+  const regex = new RegExp(`^TASK-${year}-(\\d+)$`);
+  const tasksWithId = await this.find({ taskId: regex }, 'taskId');
+  let maxSeq = 0;
+  for (const t of tasksWithId) {
+    if (t.taskId) {
+      const match = t.taskId.match(regex);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (num > maxSeq) maxSeq = num;
+      }
+    }
+  }
+  let candidateSeq = maxSeq + 1;
+  let candidateId = `TASK-${year}-${String(candidateSeq).padStart(5, '0')}`;
+  while (await this.exists({ taskId: candidateId })) {
+    candidateSeq++;
+    candidateId = `TASK-${year}-${String(candidateSeq).padStart(5, '0')}`;
+  }
+  return candidateId;
+};
+
+// Auto-assign human-readable Task ID and compute progress
 taskSchema.pre('save', async function (next) {
   if (!this.taskId) {
-    const year = new Date().getFullYear();
-    const count = await mongoose.model('Task').countDocuments();
-    const padded = String(count + 1).padStart(5, '0');
-    this.taskId = `TASK-${year}-${padded}`;
+    this.taskId = await mongoose.model('Task').generateNextTaskId();
   }
 
   // Calculate progress from subtasks if subtasks exist

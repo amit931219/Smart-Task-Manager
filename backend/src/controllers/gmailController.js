@@ -129,7 +129,10 @@ const approveDraft = async (req, res, next) => {
     }
 
     // 1. Create task in MongoDB
+    const taskId = await Task.generateNextTaskId();
+
     const task = await Task.create({
+      taskId,
       title: taskTitle,
       description: description || draft.extractedTask.description || draft.body,
       priority: taskPriority,
