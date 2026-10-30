@@ -69,6 +69,21 @@ const taskSchema = new mongoose.Schema(
       required: true,
     },
     subtasks: [subtaskSchema],
+    attachments: [
+      {
+        filename: { type: String, required: true },
+        originalName: { type: String },
+        contentType: { type: String, default: 'application/octet-stream' },
+        size: { type: Number, default: 0 },
+        savedFilename: { type: String },
+        path: { type: String },
+        url: { type: String },
+        downloadUrl: { type: String },
+        attachmentId: { type: String },
+        messageId: { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
     source: {
       type: String,
       enum: ['manual', 'gmail'],

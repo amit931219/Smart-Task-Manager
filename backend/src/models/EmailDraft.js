@@ -66,6 +66,20 @@ const emailDraftSchema = new mongoose.Schema(
         default: '',
       },
     },
+    attachments: [
+      {
+        filename: { type: String, required: true },
+        originalName: { type: String },
+        contentType: { type: String, default: 'application/octet-stream' },
+        size: { type: Number, default: 0 },
+        savedFilename: { type: String },
+        path: { type: String },
+        url: { type: String },
+        downloadUrl: { type: String },
+        attachmentId: { type: String },
+        messageId: { type: String },
+      },
+    ],
     status: {
       type: String,
       enum: ['pending_review', 'approved', 'rejected'],

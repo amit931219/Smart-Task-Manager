@@ -8,8 +8,19 @@ import {
   User,
   Edit2,
   Check,
+  Paperclip,
+  Download,
+  ExternalLink,
+  FileText,
 } from 'lucide-react';
 import api from '../../services/api';
+
+const formatSize = (bytes) => {
+  if (!bytes || bytes === 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const DraftReviewCard = ({ draft, users = [], onApproved, onRejected }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -244,6 +255,62 @@ const DraftReviewCard = ({ draft, users = [], onApproved, onRejected }) => {
               </div>
             </div>
           )}
+
+        {/* Email Attachments */}
+        {draft.attachments && draft.attachments.length > 0 && (
+          <div className="mt-3.5 pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Paperclip className="w-3.5 h-3.5 text-purple-600" />
+              <span className="text-slate-700 font-semibold text-[11px]">
+                Original Email Attachments ({draft.attachments.length})
+              </span>
+              <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                Will be attached to task
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {draft.attachments.map((att, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors text-xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                    <FileText className="w-4 h-4 text-purple-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800 truncate" title={att.filename}>
+                        {att.filename}
+                      </p>
+                      {att.size > 0 && (
+                        <p className="text-[10px] text-slate-400">{formatSize(att.size)}</p>
+                      )}
+                    </div>
+                  </div>
+                  {att.url && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+                        title="View / Open in tab"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href={att.downloadUrl || `${att.url}?download=true&name=${encodeURIComponent(att.filename)}`}
+                        download={att.filename}
+                        className="p-1 rounded text-purple-700 hover:text-purple-900 hover:bg-purple-100 transition-colors"
+                        title="Download attachment"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Approval Footer */}

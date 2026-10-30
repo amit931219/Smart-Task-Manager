@@ -9,14 +9,16 @@ const {
   getAuthUrl,
   oauth2Callback,
   updateGmailConfig,
+  downloadAttachment,
 } = require('../controllers/gmailController');
 const { protect } = require('../middlewares/auth');
 
 const router = express.Router();
 
-// Public routes for Google OAuth2 handshake
+// Public routes for Google OAuth2 handshake & attachment downloads
 router.get('/oauth2callback', oauth2Callback);
 router.get('/auth-url', getAuthUrl);
+router.get('/attachments/:filename', downloadAttachment);
 
 // Protected routes
 router.use(protect);

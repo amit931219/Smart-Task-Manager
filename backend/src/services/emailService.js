@@ -64,6 +64,14 @@ const sendTaskAssignedEmail = async ({ recipient, task, assignerName }) => {
             <h3 style="margin: 8px 0 10px 0; color: #1e293b;">${task.title}</h3>
             <p style="margin: 0 0 10px 0; color: #475569;">${task.description || 'No description provided.'}</p>
             <p style="margin: 0; font-size: 14px;"><strong>Due Date:</strong> ${new Date(task.dueDate).toLocaleDateString()} | <strong>Priority:</strong> <span style="text-transform: uppercase; color: #ef4444;">${task.priority}</span></p>
+            ${task.attachments && task.attachments.length > 0 ? `
+              <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 13px; color: #334155;">
+                <strong>📎 Attached Files (${task.attachments.length}):</strong>
+                <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+                  ${task.attachments.map((a) => `<li>${a.filename} ${a.size ? `(${Math.round(a.size / 1024)} KB)` : ''}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
           </div>
           <p>Please log in to your Smart Task Manager dashboard to view details and start working.</p>
           <p style="color: #94a3b8; font-size: 12px; margin-top: 30px;">Smart Task Manager Automated System</p>

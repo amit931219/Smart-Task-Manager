@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Send, Mail } from 'lucide-react';
+import { X, Send, Mail, Paperclip } from 'lucide-react';
 import api from '../../services/api';
 
 const QUICK_TEMPLATES = [
@@ -35,6 +35,7 @@ const SimulateEmailModal = ({ isOpen, onClose, onEmailReceived }) => {
   const [body, setBody] = useState(
     'Please ask Rahul to prepare the BCS402 course file by Monday. This is high priority.'
   );
+  const [includeAttachment, setIncludeAttachment] = useState(true);
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -50,7 +51,20 @@ const SimulateEmailModal = ({ isOpen, onClose, onEmailReceived }) => {
     if (!subject || !body) return;
     setLoading(true);
     try {
-      const res = await api.post('/gmail/simulate', { from, subject, body });
+      const attachments = includeAttachment
+        ? [
+            {
+              filename: 'BCS402_Lab_Manual.pdf',
+              originalName: 'BCS402_Lab_Manual.pdf',
+              contentType: 'application/pdf',
+              size: 245760,
+              url: '/api/gmail/attachments/sample_BCS402_Lab_Manual.pdf',
+              downloadUrl: '/api/gmail/attachments/sample_BCS402_Lab_Manual.pdf?download=true&name=BCS402_Lab_Manual.pdf',
+              savedFilename: 'sample_BCS402_Lab_Manual.pdf',
+            },
+          ]
+        : [];
+      const res = await api.post('/gmail/simulate', { from, subject, body, attachments });
       if (onEmailReceived) onEmailReceived(res.data.data);
       onClose();
     } catch (err) {
@@ -138,6 +152,23 @@ const SimulateEmailModal = ({ isOpen, onClose, onEmailReceived }) => {
               className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
               required
             />
+          </div>
+
+          {/* Optional Attachment Toggle */}
+          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={includeAttachment}
+                onChange={(e) => setIncludeAttachment(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-slate-900 focus:ring-0 cursor-pointer"
+              />
+              <span className="flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-purple-600" />
+                Include document attachment (BCS402_Lab_Manual.pdf)
+              </span>
+            </label>
+            <span className="text-[10px] text-slate-400">PDF • 240 KB</span>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

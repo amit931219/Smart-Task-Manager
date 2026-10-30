@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -16,8 +17,12 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
+// Security middleware (allow cross-origin resources for attachments/uploads)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 
 // CORS configuration
 app.use(
@@ -26,6 +31,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Serve uploaded attachments statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));

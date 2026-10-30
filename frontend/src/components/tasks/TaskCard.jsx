@@ -7,6 +7,7 @@ import {
   User,
   CheckSquare,
   CheckCircle2,
+  Paperclip,
 } from 'lucide-react';
 
 const TaskCard = ({ task, onClick, onStatusChange }) => {
@@ -69,6 +70,14 @@ const TaskCard = ({ task, onClick, onStatusChange }) => {
           {task.source === 'gmail' && (
             <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
               <Mail className="w-2.5 h-2.5" /> Gmail
+            </span>
+          )}
+          {task.attachments && task.attachments.length > 0 && (
+            <span
+              className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1"
+              title={`${task.attachments.length} attached document(s)`}
+            >
+              <Paperclip className="w-2.5 h-2.5 text-purple-600" /> {task.attachments.length}
             </span>
           )}
         </div>

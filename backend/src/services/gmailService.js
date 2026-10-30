@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { google } = require('googleapis');
 const EmailDraft = require('../models/EmailDraft');
 const aiService = require('./aiService');
@@ -9,7 +11,18 @@ const SAMPLE_EMAILS = [
     messageId: 'sim-msg-101',
     from: 'dr.sharma@college.edu',
     subject: 'BCS402 Course File Preparation',
-    body: 'Please ask Rahul to prepare the BCS402 course file by Monday. This is high priority.',
+    body: 'Please ask Rahul to prepare the BCS402 course file by Monday. Attached is the BCS402 syllabus and lab manual. This is high priority.',
+    attachments: [
+      {
+        filename: 'BCS402_Lab_Manual.pdf',
+        originalName: 'BCS402_Lab_Manual.pdf',
+        contentType: 'application/pdf',
+        size: 245760,
+        url: '/api/gmail/attachments/sample_BCS402_Lab_Manual.pdf',
+        downloadUrl: '/api/gmail/attachments/sample_BCS402_Lab_Manual.pdf?download=true&name=BCS402_Lab_Manual.pdf',
+        savedFilename: 'sample_BCS402_Lab_Manual.pdf',
+      },
+    ],
     receivedAt: new Date(),
   },
   {
@@ -122,11 +135,118 @@ const extractBodyFromPayload = (payload) => {
   return '';
 };
 
+// Recursively find all attachment parts in a Gmail message payload
+const findAttachmentParts = (payload, partsList = []) => {
+  if (!payload) return partsList;
+
+  // A part is considered an attachment if it has a non-empty filename
+  if (payload.filename && payload.filename.trim() !== '') {
+    partsList.push(payload);
+  }
+
+  if (payload.parts && Array.isArray(payload.parts)) {
+    for (const subPart of payload.parts) {
+      findAttachmentParts(subPart, partsList);
+    }
+  }
+
+  return partsList;
+};
+
+// Download and save all attachments from a Gmail message payload
+const downloadAndSaveAttachments = async (gmail, messageId, payload) => {
+  const parts = findAttachmentParts(payload);
+  if (!parts || parts.length === 0) return [];
+
+  const uploadDir = path.join(__dirname, '../../uploads/attachments');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const savedAttachments = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const originalName = part.filename;
+    const contentType = part.mimeType || 'application/octet-stream';
+    const attachmentId = part.body?.attachmentId;
+    let base64Data = part.body?.data;
+
+    try {
+      if (!base64Data && attachmentId && gmail) {
+        console.log(`[GmailService] Fetching attachment data for "${originalName}" (id: ${attachmentId}) in msg ${messageId}...`);
+        const attachRes = await gmail.users.messages.attachments.get({
+          userId: 'me',
+          messageId: messageId,
+          id: attachmentId,
+        });
+        base64Data = attachRes.data?.data;
+      }
+
+      if (base64Data) {
+        const fileBuffer = Buffer.from(
+          base64Data.replace(/-/g, '+').replace(/_/g, '/'),
+          'base64'
+        );
+
+        // Sanitize filename for local storage
+        const sanitized = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const savedFilename = `${Date.now()}_${i + 1}_${sanitized}`;
+        const filePath = path.join(uploadDir, savedFilename);
+
+        fs.writeFileSync(filePath, fileBuffer);
+        console.log(`[GmailService] Successfully saved attachment: ${filePath} (${fileBuffer.length} bytes)`);
+
+        savedAttachments.push({
+          filename: originalName,
+          originalName,
+          savedFilename,
+          contentType,
+          size: fileBuffer.length,
+          url: `/api/gmail/attachments/${savedFilename}`,
+          downloadUrl: `/api/gmail/attachments/${savedFilename}?download=true&name=${encodeURIComponent(originalName)}`,
+          attachmentId,
+          messageId,
+          path: `uploads/attachments/${savedFilename}`,
+        });
+      } else {
+        // Fallback metadata if data couldn't be retrieved
+        savedAttachments.push({
+          filename: originalName,
+          originalName,
+          contentType,
+          size: part.body?.size || 0,
+          attachmentId,
+          messageId,
+          url: '',
+        });
+      }
+    } catch (err) {
+      console.error(`[GmailService] Error downloading attachment "${originalName}":`, err.message);
+      savedAttachments.push({
+        filename: originalName,
+        originalName,
+        contentType,
+        size: part.body?.size || 0,
+        attachmentId,
+        messageId,
+        url: '',
+      });
+    }
+  }
+
+  return savedAttachments;
+};
+
 // Process raw email through AI and save as pending EmailDraft
-const processEmailMessage = async ({ messageId, from, subject, body, receivedAt }) => {
+const processEmailMessage = async ({ messageId, from, subject, body, receivedAt, attachments = [] }) => {
   // Check if draft already exists
   const existing = await EmailDraft.findOne({ messageId });
   if (existing) {
+    if ((!existing.attachments || existing.attachments.length === 0) && attachments && attachments.length > 0) {
+      existing.attachments = attachments;
+      await existing.save();
+    }
     return existing;
   }
 
@@ -160,13 +280,14 @@ const processEmailMessage = async ({ messageId, from, subject, body, receivedAt 
     subject,
     body: cleanBody,
     receivedAt: receivedAt || new Date(),
+    attachments: attachments || [],
     extractedTask: extracted,
     status: extracted.isTaskReply ? 'approved' : 'pending_review',
   });
 
   await logActivity({
     action: 'GMAIL_SYNCED',
-    details: `Synced email "${subject}" from ${from} and parsed candidate task "${extracted.title}"`,
+    details: `Synced email "${subject}" from ${from} and parsed candidate task "${extracted.title}"${attachments.length > 0 ? ` (${attachments.length} attachment(s))` : ''}`,
     metadata: { messageId, draftId: draft._id },
   });
 
@@ -221,6 +342,32 @@ const fetchLiveGmailEmails = async () => {
     // Check if this email was already converted to a draft
     const alreadyProcessed = await EmailDraft.findOne({ messageId: msg.id });
     if (alreadyProcessed) {
+      // If draft exists but attachments were not captured in an earlier run, backfill them from Gmail
+      if (!alreadyProcessed.attachments || alreadyProcessed.attachments.length === 0) {
+        try {
+          const detail = await gmail.users.messages.get({
+            userId: 'me',
+            id: msg.id,
+            format: 'full',
+          });
+          const attachments = await downloadAndSaveAttachments(gmail, msg.id, detail.data.payload);
+          if (attachments && attachments.length > 0) {
+            alreadyProcessed.attachments = attachments;
+            await alreadyProcessed.save();
+            console.log(`[GmailService] Backfilled ${attachments.length} attachment(s) for draft ${msg.id}`);
+
+            if (alreadyProcessed.processedTaskId) {
+              const Task = require('../models/Task');
+              await Task.findByIdAndUpdate(alreadyProcessed.processedTaskId, {
+                $set: { attachments: attachments },
+              });
+              console.log(`[GmailService] Updated task ${alreadyProcessed.processedTaskId} with backfilled attachments.`);
+            }
+          }
+        } catch (backfillErr) {
+          console.warn(`[GmailService] Could not backfill attachments for ${msg.id}:`, backfillErr.message);
+        }
+      }
       console.log(`[GmailService] Message ${msg.id} already exists as draft. Skipping.`);
       continue;
     }
@@ -239,7 +386,10 @@ const fetchLiveGmailEmails = async () => {
     const from = fromHeader ? fromHeader.value : 'unknown@domain.com';
     const bodyText = extractBodyFromPayload(detail.data.payload) || detail.data.snippet || subject;
 
-    console.log(`[GmailService] Parsing new email into task draft: "${subject}" from ${from}`);
+    // Extract, download and preserve attachments from the Gmail message payload
+    const attachments = await downloadAndSaveAttachments(gmail, msg.id, detail.data.payload);
+
+    console.log(`[GmailService] Parsing new email into task draft: "${subject}" from ${from} (${attachments.length} attachment(s))`);
 
     const draft = await processEmailMessage({
       messageId: msg.id,
@@ -247,6 +397,7 @@ const fetchLiveGmailEmails = async () => {
       subject,
       body: bodyText,
       receivedAt: new Date(Number(detail.data.internalDate) || Date.now()),
+      attachments,
     });
 
     processedDrafts.push(draft);
@@ -300,13 +451,14 @@ const syncGmailInbox = async (forceSimulateIndex = null) => {
 };
 
 // Simulate custom incoming email submitted by user/admin in the UI
-const simulateIncomingEmail = async ({ from, subject, body }) => {
+const simulateIncomingEmail = async ({ from, subject, body, attachments = [] }) => {
   const item = {
     messageId: `custom-msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     from: from || 'colleague@smarttask.com',
     subject: subject || 'New Project Task Request',
     body: body || 'Please complete this task by next Monday.',
     receivedAt: new Date(),
+    attachments: attachments || [],
   };
 
   return await processEmailMessage(item);

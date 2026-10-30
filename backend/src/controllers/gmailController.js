@@ -41,12 +41,12 @@ const syncInbox = async (req, res, next) => {
 // @access  Private
 const simulateEmail = async (req, res, next) => {
   try {
-    const { from, subject, body } = req.body;
+    const { from, subject, body, attachments } = req.body;
     if (!subject || !body) {
       return res.status(400).json({ success: false, message: 'Subject and body are required' });
     }
 
-    const draft = await gmailService.simulateIncomingEmail({ from, subject, body });
+    const draft = await gmailService.simulateIncomingEmail({ from, subject, body, attachments });
     res.status(201).json({
       success: true,
       message: 'Simulated email received and AI parsed into draft task.',
@@ -141,6 +141,7 @@ const approveDraft = async (req, res, next) => {
       creator: req.user._id,
       assignee: taskAssigneeId,
       subtasks: formattedSubtasks,
+      attachments: draft.attachments || [],
       source: 'gmail',
       emailMetadata: {
         messageId: draft.messageId,
@@ -380,6 +381,33 @@ const updateGmailConfig = async (req, res, next) => {
   }
 };
 
+// @desc    Download or view an attachment file
+// @route   GET /api/gmail/attachments/:filename
+// @access  Public
+const downloadAttachment = async (req, res, next) => {
+  try {
+    const rawFilename = req.params.filename;
+    // Security check against directory traversal
+    const safeFilename = path.basename(rawFilename);
+    const filePath = path.join(__dirname, '../../uploads/attachments', safeFilename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Attachment file not found' });
+    }
+
+    const downloadName = req.query.name || safeFilename;
+    const isDownload = req.query.download === 'true' || req.query.dl === '1';
+
+    if (isDownload) {
+      return res.download(filePath, downloadName);
+    } else {
+      return res.sendFile(filePath);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   syncInbox,
   simulateEmail,
@@ -390,5 +418,6 @@ module.exports = {
   getAuthUrl,
   oauth2Callback,
   updateGmailConfig,
+  downloadAttachment,
 };
 
