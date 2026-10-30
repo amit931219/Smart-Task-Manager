@@ -6,6 +6,7 @@ import {
   Mail,
   User,
   CheckSquare,
+  CheckCircle2,
 } from 'lucide-react';
 
 const TaskCard = ({ task, onClick, onStatusChange }) => {
@@ -27,7 +28,21 @@ const TaskCard = ({ task, onClick, onStatusChange }) => {
 
   const completedSubtasks = task.subtasks ? task.subtasks.filter((s) => s.completed).length : 0;
   const totalSubtasks = task.subtasks ? task.subtasks.length : 0;
-  const subtaskPercent = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
+  const currentProgress =
+    task.progress !== undefined && task.progress !== null
+      ? task.progress
+      : totalSubtasks > 0
+      ? Math.round((completedSubtasks / totalSubtasks) * 100)
+      : task.status === 'completed'
+      ? 100
+      : 0;
+
+  const handleQuickComplete = (e) => {
+    e.stopPropagation();
+    if (onStatusChange) {
+      onStatusChange(task._id, 'completed');
+    }
+  };
 
   return (
     <div
@@ -36,9 +51,14 @@ const TaskCard = ({ task, onClick, onStatusChange }) => {
         isOverdue ? 'border-rose-200/90' : 'border-slate-200/90'
       }`}
     >
-      {/* Header Badges */}
+      {/* Header Badges & Task ID */}
       <div className="flex items-center justify-between gap-1.5 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
+          {task.taskId && (
+            <span className="text-[10px] font-mono font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+              {task.taskId}
+            </span>
+          )}
           <span
             className={`text-[10px] uppercase font-semibold px-1.5 py-0.2 rounded border ${
               priorityStyles[task.priority] || priorityStyles.medium
@@ -68,30 +88,32 @@ const TaskCard = ({ task, onClick, onStatusChange }) => {
         </p>
       )}
 
-      {/* Subtasks Progress Bar */}
-      {totalSubtasks > 0 && (
-        <div className="mt-2.5">
-          <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-            <span className="flex items-center gap-1">
-              <CheckSquare className="w-2.5 h-2.5 text-slate-400" />
-              Subtasks
-            </span>
-            <span className="font-medium text-slate-700 tabular-nums">
-              {completedSubtasks}/{totalSubtasks}
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                subtaskPercent === 100 ? 'bg-emerald-500' : 'bg-slate-700'
-              }`}
-              style={{ width: `${subtaskPercent}%` }}
-            />
-          </div>
+      {/* Progress & Subtasks Bar */}
+      <div className="mt-2.5">
+        <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+          <span className="flex items-center gap-1 font-medium text-slate-600">
+            <CheckSquare className="w-2.5 h-2.5 text-slate-400" />
+            {totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks} subtasks` : 'Progress'}
+          </span>
+          <span className="font-semibold text-slate-700 tabular-nums">
+            {currentProgress}%
+          </span>
         </div>
-      )}
+        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              currentProgress === 100
+                ? 'bg-emerald-500'
+                : currentProgress > 50
+                ? 'bg-sky-600'
+                : 'bg-slate-700'
+            }`}
+            style={{ width: `${currentProgress}%` }}
+          />
+        </div>
+      </div>
 
-      {/* Footer Info: Assignee & Due Date */}
+      {/* Footer Info: Assignee, Due Date & Quick Complete */}
       <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[9px] font-medium text-slate-700 shrink-0">
@@ -106,13 +128,25 @@ const TaskCard = ({ task, onClick, onStatusChange }) => {
           </span>
         </div>
 
-        <div
-          className={`flex items-center gap-1 text-[11px] font-medium tabular-nums ${
-            isOverdue ? 'text-rose-600 font-semibold' : 'text-slate-500'
-          }`}
-        >
-          <Calendar className="w-3 h-3 text-slate-400" />
-          <span>{new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex items-center gap-1 text-[11px] font-medium tabular-nums ${
+              isOverdue ? 'text-rose-600 font-semibold' : 'text-slate-500'
+            }`}
+          >
+            <Calendar className="w-3 h-3 text-slate-400" />
+            <span>{new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          </div>
+
+          {task.status !== 'completed' && onStatusChange && (
+            <button
+              onClick={handleQuickComplete}
+              title="Mark Task Complete"
+              className="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -102,10 +102,31 @@ const generateSummary = async (req, res, next) => {
   }
 };
 
+// @desc    5. AI Command Center Natural Language Query
+// @route   POST /api/ai/command-center
+// @access  Private
+const queryCommandCenter = async (req, res, next) => {
+  try {
+    const { query } = req.body;
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ success: false, message: 'query string is required' });
+    }
+
+    const result = await aiService.queryCommandCenter(query, req.user);
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   parseEmail,
   generateSubtasks,
   checkPriorityAndDeadline,
   generateSummary,
+  queryCommandCenter,
 };
 

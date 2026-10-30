@@ -4,22 +4,28 @@ import api from '../../services/api';
 
 const QUICK_TEMPLATES = [
   {
-    label: 'Course File (Rahul)',
+    label: 'Point 1: NBA Criterion (Rahul)',
+    from: 'jagat@college.edu',
+    subject: 'NBA Criterion 3 Course Mapping',
+    body: 'Please prepare the NBA Criterion 3 course mapping for B.Tech CSE. Assign this to Rahul. Priority: High. Complete by 30 September.',
+  },
+  {
+    label: 'Point 5: @tag Directives',
+    from: 'hod.cse@college.edu',
+    subject: 'Curriculum Revision Task',
+    body: '@task Prepare NBA Criterion 3 Documentation @assign Rahul @priority HIGH @due 30-09-2026 @subtask Collect course files @subtask Prepare CO-PO mapping @subtask Verify evidence',
+  },
+  {
+    label: 'Point 10: Task ID Reply',
+    from: 'rahul@smarttask.com',
+    subject: 'Re: [TASK-2026-00001] Status Update',
+    body: 'TASK-2026-00001 completed. All course files compiled and verified.',
+  },
+  {
+    label: 'Course File (BCS402)',
     from: 'dr.sharma@college.edu',
     subject: 'BCS402 Course File Preparation',
     body: 'Please ask Rahul to prepare the BCS402 course file by Monday. This is high priority.',
-  },
-  {
-    label: 'Accreditation Report (Priya)',
-    from: 'dean.academics@college.edu',
-    subject: 'Annual Department Accreditation Report',
-    body: 'Need Priya to collate faculty research publications, student achievements, and placement data for the CSE annual report by next Friday. Important deliverable.',
-  },
-  {
-    label: 'Urgent Staging DB (Amit)',
-    from: 'devops.lead@smarttask.com',
-    subject: 'Action Required: Fix Staging Server Connection',
-    body: 'Please ask Amit to investigate staging server database timeout issues immediately by tomorrow morning. This is urgent priority.',
   },
 ];
 

@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const Task = require('../models/Task');
+const Notification = require('../models/Notification');
 const { sendOverdueAlertEmail } = require('./emailService');
 const { logActivity } = require('./activityService');
 
@@ -52,19 +53,58 @@ const checkAndProcessOverdueTasks = async () => {
   }
 };
 
+// Check for tasks due today or tomorrow (Point 7: Automatic Alerts)
+const checkDueTodayAndTomorrowTasks = async () => {
+  try {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+
+    const upcomingTasks = await Task.find({
+      dueDate: { $gte: startOfToday, $lt: endOfTomorrow },
+      status: { $in: ['pending', 'in-progress'] },
+    }).populate('assignee', 'name email');
+
+    for (const t of upcomingTasks) {
+      const isDueToday = t.dueDate.toDateString() === now.toDateString();
+      const titlePrefix = isDueToday ? '🔴 Task Due Today' : '🟡 Task Due Tomorrow';
+
+      // Check if notification already dispatched today
+      const alreadySent = await Notification.findOne({
+        task: t._id,
+        type: 'deadline_warning',
+        createdAt: { $gte: startOfToday },
+      });
+
+      if (!alreadySent && t.assignee) {
+        await Notification.create({
+          recipient: t.assignee._id,
+          title: `${titlePrefix}: ${t.title}`,
+          message: `${t.taskId ? `[${t.taskId}] ` : ''}Deliverable is due ${isDueToday ? 'today' : 'tomorrow'} (${t.dueDate.toLocaleDateString()}).`,
+          type: 'deadline_warning',
+          task: t._id,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[CronService] Error checking upcoming deadlines:', err.message);
+  }
+};
+
 // Initialize cron schedule (Runs every hour: '0 * * * *')
 const initCronJobs = () => {
-  // Cron schedule: every hour at minute 0
   cron.schedule('0 * * * *', async () => {
-    console.log('[CronService] Running scheduled hourly overdue tasks check...');
+    console.log('[CronService] Running scheduled hourly overdue and deadline check...');
     await checkAndProcessOverdueTasks();
+    await checkDueTodayAndTomorrowTasks();
   });
 
-  console.log('[CronService] Background overdue task cron job scheduled.');
+  console.log('[CronService] Background overdue & deadline alert cron job scheduled.');
 };
 
 module.exports = {
   initCronJobs,
   checkAndProcessOverdueTasks,
+  checkDueTodayAndTomorrowTasks,
 };
 

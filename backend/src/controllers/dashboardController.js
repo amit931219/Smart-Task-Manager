@@ -16,6 +16,16 @@ const getDashboardMetrics = async (req, res, next) => {
     const pendingTasks = await Task.countDocuments({ ...filter, status: 'pending' });
     const overdueTasks = await Task.countDocuments({ ...filter, status: 'overdue' });
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const dueTodayTasks = await Task.countDocuments({
+      ...filter,
+      dueDate: { $gte: startOfToday, $lte: endOfToday },
+      status: { $ne: 'completed' },
+    });
+
     const emailTasksCount = await Task.countDocuments({ ...filter, source: 'gmail' });
     const pendingDraftsCount = await EmailDraft.countDocuments({ status: 'pending_review' });
 
@@ -92,6 +102,7 @@ const getDashboardMetrics = async (req, res, next) => {
           inProgressTasks,
           pendingTasks,
           overdueTasks,
+          dueTodayTasks,
           completionRate,
           emailTasksCount,
           pendingDraftsCount,

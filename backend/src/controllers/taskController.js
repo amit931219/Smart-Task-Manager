@@ -9,15 +9,30 @@ const { checkAndProcessOverdueTasks } = require('../services/cronService');
 // @access  Private
 const getTasks = async (req, res, next) => {
   try {
-    const { status, priority, department, assignee, search, sort = '-createdAt' } = req.query;
+    const { status, priority, department, assignee, search, scope, sort = '-createdAt' } = req.query;
 
     const query = {};
 
-    // If logged-in user is employee and requests my-tasks or role-based filtering:
-    if (req.user.role === 'employee' && req.query.scope === 'assigned') {
+    // Scope filtering (Point 2: Assigned to me, Point 4: Created by me)
+    if (scope === 'assigned' || scope === 'my-tasks') {
       query.assignee = req.user._id;
-    } else if (assignee) {
+    } else if (scope === 'created') {
+      query.creator = req.user._id;
+    } else if (req.user.role === 'employee' && !assignee) {
+      // Default employee view: allow them to see all or filter by assigned
+      // query.assignee = req.user._id;
+    }
+
+    if (assignee) {
       query.assignee = assignee;
+    }
+
+    if (scope === 'due_today') {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      query.dueDate = { $gte: startOfDay, $lte: endOfDay };
     }
 
     if (status) {
@@ -36,6 +51,7 @@ const getTasks = async (req, res, next) => {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
+        { taskId: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -139,7 +155,7 @@ const updateTask = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
 
-    const { title, description, priority, dueDate, department, assignee, status } = req.body;
+    const { title, description, priority, dueDate, department, assignee, status, progress } = req.body;
 
     // Track if assignee changed
     const previousAssigneeId = task.assignee.toString();
@@ -150,9 +166,13 @@ const updateTask = async (req, res, next) => {
     task.dueDate = dueDate || task.dueDate;
     task.department = department || task.department;
     if (assignee) task.assignee = assignee;
+    if (progress !== undefined) task.progress = Number(progress);
     if (status) {
       task.status = status;
-      if (status === 'completed') task.completedAt = new Date();
+      if (status === 'completed') {
+        task.completedAt = new Date();
+        task.progress = 100;
+      }
     }
 
     await task.save();
@@ -211,8 +231,10 @@ const updateTaskStatus = async (req, res, next) => {
     task.status = status;
     if (status === 'completed') {
       task.completedAt = new Date();
+      task.progress = 100;
     } else {
       task.completedAt = null;
+      if (task.progress === 100) task.progress = 50;
     }
 
     await task.save();

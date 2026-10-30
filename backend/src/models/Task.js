@@ -18,6 +18,11 @@ const subtaskSchema = new mongoose.Schema({
 
 const taskSchema = new mongoose.Schema(
   {
+    taskId: {
+      type: String,
+      unique: true,
+      index: true,
+    },
     title: {
       type: String,
       required: [true, 'Please provide a task title'],
@@ -37,6 +42,12 @@ const taskSchema = new mongoose.Schema(
       type: String,
       enum: ['low', 'medium', 'high', 'urgent'],
       default: 'medium',
+    },
+    progress: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
     },
     dueDate: {
       type: Date,
@@ -86,8 +97,33 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
+// Auto-assign human-readable Task ID (e.g. TASK-2026-00042) and compute progress
+taskSchema.pre('save', async function (next) {
+  if (!this.taskId) {
+    const year = new Date().getFullYear();
+    const count = await mongoose.model('Task').countDocuments();
+    const padded = String(count + 1).padStart(5, '0');
+    this.taskId = `TASK-${year}-${padded}`;
+  }
+
+  // Calculate progress from subtasks if subtasks exist
+  if (this.subtasks && this.subtasks.length > 0) {
+    const completedCount = this.subtasks.filter((s) => s.completed).length;
+    this.progress = Math.round((completedCount / this.subtasks.length) * 100);
+    if (this.progress === 100 && this.status !== 'completed') {
+      this.status = 'completed';
+      this.completedAt = new Date();
+    }
+  } else if (this.status === 'completed') {
+    this.progress = 100;
+  }
+
+  next();
+});
+
 // Indexing for rapid queries, filters, and dashboard metrics
 taskSchema.index({ assignee: 1, status: 1 });
+taskSchema.index({ creator: 1, status: 1 });
 taskSchema.index({ dueDate: 1, status: 1 });
 taskSchema.index({ department: 1 });
 

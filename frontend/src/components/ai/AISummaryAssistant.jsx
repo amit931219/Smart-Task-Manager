@@ -5,14 +5,31 @@ import {
   Printer,
   AlertTriangle,
   Clock,
+  Search,
+  MessageSquare,
+  CheckCircle2,
+  Calendar,
+  User,
 } from 'lucide-react';
 import api from '../../services/api';
+
+const QUICK_PROMPTS = [
+  'Show me all high-priority NBA tasks that are overdue.',
+  'What work is pending with the CSE department?',
+  'Which faculty have tasks due this week?',
+  "Prepare today's task summary for me.",
+];
 
 const AISummaryAssistant = () => {
   const [department, setDepartment] = useState('CSE');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
+
+  // Command Center Query State (Point 11)
+  const [commandQuery, setCommandQuery] = useState('');
+  const [queryingCommand, setQueryingCommand] = useState(false);
+  const [commandResult, setCommandResult] = useState(null);
 
   const generateReport = async () => {
     setLoading(true);
@@ -35,16 +52,132 @@ const AISummaryAssistant = () => {
     window.print();
   };
 
+  const handleRunCommand = async (queryText) => {
+    const q = queryText || commandQuery;
+    if (!q.trim()) return;
+    setCommandQuery(q);
+    setQueryingCommand(true);
+    try {
+      const res = await api.post('/ai/command-center', { query: q });
+      setCommandResult(res.data.data);
+    } catch (err) {
+      console.error('Command center error', err);
+    } finally {
+      setQueryingCommand(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
-      {/* Top Controls */}
+      {/* 1. Point 11: AI College Task Operating System & Command Center */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-subtle space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-slate-900 text-white">
+            <Sparkles className="w-4 h-4 text-sky-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 tracking-tight">
+              AI Command Center & Natural Language Querying
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Ask operational questions grounded in verified MongoDB task telemetry (Point 11)
+            </p>
+          </div>
+        </div>
+
+        {/* Input Bar */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleRunCommand();
+          }}
+          className="flex gap-2"
+        >
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={commandQuery}
+              onChange={(e) => setCommandQuery(e.target.value)}
+              placeholder="e.g. Show high-priority NBA tasks, or pending work with CSE..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={queryingCommand || !commandQuery.trim()}
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-colors shadow-subtle disabled:opacity-60 shrink-0"
+          >
+            {queryingCommand ? 'Analyzing...' : 'Ask AI'}
+          </button>
+        </form>
+
+        {/* Quick Suggestion Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="text-[11px] font-semibold text-slate-400 mr-1">Quick Queries:</span>
+          {QUICK_PROMPTS.map((p, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleRunCommand(p)}
+              className="text-[11px] px-2.5 py-1 rounded-md bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+
+        {/* Command Center Live Results Box */}
+        {commandResult && (
+          <div className="mt-3 p-3.5 bg-slate-50 border border-slate-200/90 rounded-lg text-xs space-y-2.5 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                AI Inference: {commandResult.explanation}
+              </span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">
+                {commandResult.matchCount} task(s) matched
+              </span>
+            </div>
+
+            {commandResult.tasks && commandResult.tasks.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {commandResult.tasks.map((t) => (
+                  <div
+                    key={t._id}
+                    className="p-2.5 bg-white border border-slate-200 rounded-md shadow-subtle space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-semibold text-sky-800 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200">
+                        {t.taskId || 'TASK'}
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase text-slate-500">
+                        {t.status}
+                      </span>
+                    </div>
+                    <p className="font-medium text-slate-900 truncate">{t.title}</p>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                      <span>Owner: {t.assignee?.name || 'Unassigned'}</span>
+                      <span className="tabular-nums">{new Date(t.dueDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 italic">No matching tasks found in database.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Top Departmental Briefing Controls */}
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
             <Bot className="w-4 h-4 text-slate-700" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-900 tracking-tight">Departmental Intelligence Assistant</h2>
+            <h2 className="text-sm font-semibold text-slate-900 tracking-tight">Departmental Briefing & Audit</h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Synthesized executive audits grounded in MongoDB operational records
             </p>

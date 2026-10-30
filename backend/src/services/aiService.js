@@ -9,92 +9,156 @@ const User = require('../models/User');
  * 3. OpenAI API (if OPENAI_API_KEY configured)
  */
 
-// Heuristic fallback for Email to Task
+// Heuristic fallback for Email to Task with structured tag parsing (@assign, @priority, @due, @task, @subtask)
 const extractTaskHeuristic = async (emailSubject, emailBody) => {
   const combined = `${emailSubject} \n ${emailBody}`.trim();
-
-  // 1. Extract deadline using chrono-node
-  const parsedDates = chrono.parse(combined);
-  let deadline = null;
-  if (parsedDates && parsedDates.length > 0) {
-    deadline = parsedDates[0].start.date();
-  } else {
-    // Default to 3 days ahead if no date is found
-    deadline = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-  }
-
-  // 2. Extract priority
-  let priority = 'medium';
   const lower = combined.toLowerCase();
-  if (lower.includes('urgent') || lower.includes('asap') || lower.includes('immediately')) {
-    priority = 'urgent';
-  } else if (lower.includes('high priority') || lower.includes('high') || lower.includes('important')) {
-    priority = 'high';
-  } else if (lower.includes('low priority') || lower.includes('when possible') || lower.includes('low')) {
-    priority = 'low';
-  }
 
-  // 3. Extract assignee candidate
-  let assigneeName = '';
-  const askMatch = combined.match(/ask\s+([A-Za-z]+)/i) ||
-                     combined.match(/assign\s+(?:to\s+)?([A-Za-z]+)/i) ||
-                     combined.match(/tell\s+([A-Za-z]+)/i) ||
-                     combined.match(/for\s+([A-Za-z]+)/i);
-
-  if (askMatch && askMatch[1]) {
-    assigneeName = askMatch[1].trim();
-  }
-
-  // 4. Extract department candidate
-  let department = 'General';
-  if (lower.includes('cse') || lower.includes('bcs') || lower.includes('computer')) {
-    department = 'CSE';
-  } else if (lower.includes('ece') || lower.includes('electronics')) {
-    department = 'ECE';
-  } else if (lower.includes('sales') || lower.includes('revenue')) {
-    department = 'Sales';
-  } else if (lower.includes('marketing') || lower.includes('campaign')) {
-    department = 'Marketing';
-  }
-
-  // 5. Extract task title
-  let title = emailSubject;
-  const taskPatterns = [
-    /ask\s+[A-Za-z]+\s+to\s+([^.\n]+)/i,
-    /please\s+([^.\n]+)/i,
-    /need\s+to\s+([^.\n]+)/i,
-    /action\s+required:\s*([^.\n]+)/i,
-  ];
-
-  for (const pat of taskPatterns) {
-    const m = combined.match(pat);
-    if (m && m[1]) {
-      // Clean up extracted title
-      title = m[1].replace(/by\s+[A-Za-z0-9\s]+/i, '')
-                  .replace(/this\s+is\s+.*$/i, '')
-                  .trim();
-      break;
+  // 0. Check for Task ID update directive (Point 10: "TASK-2026-00482 completed")
+  const taskIdMatch = combined.match(/(TASK-\d{4}-\d{5})/i);
+  let isTaskReply = false;
+  let replyTaskId = null;
+  if (taskIdMatch) {
+    replyTaskId = taskIdMatch[1].toUpperCase();
+    if (lower.includes('completed') || lower.includes('done') || lower.includes('finished') || lower.includes('closed')) {
+      isTaskReply = true;
     }
   }
 
-  if (!title || title.length < 5) {
-    title = emailSubject.replace(/^(re:|fwd:)\s*/i, '').trim();
+  // 1. Check for structured command tags (Point 5: @assign, @priority, @due, @task, @subtask)
+  const tagAssignMatch = combined.match(/@assign\s+([^\n@,]+)/i);
+  const tagPriorityMatch = combined.match(/@priority\s+([^\n@,]+)/i);
+  const tagDueMatch = combined.match(/@due\s+([^\n@,]+)/i);
+  const tagTaskMatch = combined.match(/@task\s+([^\n@]+)/i) || combined.match(/@title\s+([^\n@]+)/i);
+  const tagSubtaskMatches = [...combined.matchAll(/@subtask\s+([^\n@]+)/gi)].map(m => m[1].trim());
+
+  // 2. Extract deadline (priority to @due tag, else chrono-node)
+  let deadline = null;
+  if (tagDueMatch && tagDueMatch[1]) {
+    const parsedTagDate = chrono.parseDate(tagDueMatch[1].trim());
+    if (parsedTagDate) {
+      deadline = parsedTagDate;
+    }
+  }
+
+  if (!deadline) {
+    const parsedDates = chrono.parse(combined);
+    if (parsedDates && parsedDates.length > 0) {
+      deadline = parsedDates[0].start.date();
+    } else {
+      // Default to 3 days ahead if no date is found
+      deadline = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    }
+  }
+
+  // 3. Extract priority (priority to @priority tag, else keyword search)
+  let priority = 'medium';
+  if (tagPriorityMatch && tagPriorityMatch[1]) {
+    const pStr = tagPriorityMatch[1].trim().toLowerCase();
+    if (['low', 'medium', 'high', 'urgent'].includes(pStr)) {
+      priority = pStr;
+    }
+  } else {
+    if (lower.includes('urgent') || lower.includes('asap') || lower.includes('immediately')) {
+      priority = 'urgent';
+    } else if (lower.includes('high priority') || lower.includes('high') || lower.includes('important')) {
+      priority = 'high';
+    } else if (lower.includes('low priority') || lower.includes('when possible') || lower.includes('low')) {
+      priority = 'low';
+    }
+  }
+
+  // 4. Extract assignee candidate (priority to @assign tag, else regex patterns)
+  let assigneeName = '';
+  if (tagAssignMatch && tagAssignMatch[1]) {
+    assigneeName = tagAssignMatch[1].trim();
+  } else {
+    const askMatch = combined.match(/ask\s+([A-Za-z]+)/i) ||
+                     combined.match(/assign\s+(?:to\s+)?([A-Za-z]+)/i) ||
+                     combined.match(/tell\s+([A-Za-z]+)/i) ||
+                     combined.match(/for\s+([A-Za-z]+)/i);
+    if (askMatch && askMatch[1]) {
+      assigneeName = askMatch[1].trim();
+    }
+  }
+
+  // 5. Extract department candidate
+  let department = 'General';
+  if (lower.includes('cse') || lower.includes('bcs') || lower.includes('computer')) {
+    department = 'CSE';
+  } else if (lower.includes('it') || lower.includes('information tech')) {
+    department = 'IT';
+  } else if (lower.includes('ece') || lower.includes('electronics')) {
+    department = 'ECE';
+  } else if (lower.includes('management') || lower.includes('admin') || lower.includes('nba')) {
+    department = 'Management';
+  }
+
+  // 6. Extract task title (priority to @task tag, else subject/body patterns)
+  let title = '';
+  if (tagTaskMatch && tagTaskMatch[1]) {
+    title = tagTaskMatch[1].trim();
+  } else {
+    const taskPatterns = [
+      /ask\s+[A-Za-z]+\s+to\s+([^.\n]+)/i,
+      /please\s+([^.\n]+)/i,
+      /need\s+to\s+([^.\n]+)/i,
+      /action\s+required:\s*([^.\n]+)/i,
+    ];
+
+    for (const pat of taskPatterns) {
+      const m = combined.match(pat);
+      if (m && m[1]) {
+        title = m[1].replace(/by\s+[A-Za-z0-9\s]+/i, '')
+                    .replace(/this\s+is\s+.*$/i, '')
+                    .trim();
+        break;
+      }
+    }
+
+    if (!title || title.length < 5) {
+      title = emailSubject.replace(/^(re:|fwd:)\s*/i, '').trim();
+    }
   }
 
   // Capitalize first letter of title
-  title = title.charAt(0).toUpperCase() + title.slice(1);
+  if (title) {
+    title = title.charAt(0).toUpperCase() + title.slice(1);
+  }
 
   // Match assignee against existing users in MongoDB
   let matchedUserId = null;
   if (assigneeName) {
     const user = await User.findOne({
-      name: { $regex: new RegExp(assigneeName, 'i') },
+      $or: [
+        { name: { $regex: new RegExp(assigneeName, 'i') } },
+        { email: { $regex: new RegExp(assigneeName, 'i') } },
+      ],
     });
     if (user) {
       matchedUserId = user._id;
       assigneeName = user.name;
       department = user.department || department;
     }
+  }
+
+  // Subtasks: use @subtask tags if provided, else contextual AI suggestions
+  let subtasks = [];
+  if (tagSubtaskMatches.length > 0) {
+    subtasks = tagSubtaskMatches.map((t) => ({ title: t, completed: false, suggestedByAI: false }));
+  } else if (lower.includes('nba') || lower.includes('criterion') || lower.includes('accreditation')) {
+    subtasks = [
+      { title: 'Collect course files and student records' },
+      { title: 'Prepare CO-PO and PSO attainment mapping' },
+      { title: 'Verify documentation against NBA evidence rubric' },
+      { title: 'Upload final verified criterion dossier' },
+    ];
+  } else {
+    subtasks = [
+      { title: `Review email requirements for ${title}` },
+      { title: 'Draft initial solution / deliverables' },
+      { title: 'Submit for review and approval' },
+    ];
   }
 
   return {
@@ -105,13 +169,11 @@ const extractTaskHeuristic = async (emailSubject, emailBody) => {
     priority,
     dueDate: deadline,
     department,
-    confidence: 0.92,
+    confidence: tagTaskMatch || tagAssignMatch ? 0.98 : 0.92,
+    isTaskReply,
+    replyTaskId,
     aiExplanation: `Extracted action "${title}" for ${assigneeName || 'team'} with deadline ${deadline ? deadline.toLocaleDateString() : 'N/A'} and priority ${priority}.`,
-    suggestedSubtasks: [
-      { title: `Review email requirements for ${title}` },
-      { title: 'Draft initial solution / deliverables' },
-      { title: 'Submit for review and approval' },
-    ],
+    suggestedSubtasks: subtasks,
   };
 };
 
@@ -302,10 +364,97 @@ const generateTaskSummary = async ({ department, tasks }) => {
   };
 };
 
+// 5. AI Command Center Query Engine (Point 11: "AI College Task Operating System")
+const queryCommandCenter = async (queryText, user) => {
+  const Task = require('../models/Task');
+  const qLower = (queryText || '').toLowerCase().trim();
+  const now = new Date();
+
+  let filter = {};
+  let explanation = '';
+  let queryCategory = 'general';
+
+  // Question A: "Show me all high-priority NBA tasks that are overdue"
+  if (qLower.includes('overdue') && (qLower.includes('high') || qLower.includes('urgent') || qLower.includes('nba'))) {
+    queryCategory = 'overdue_high_priority';
+    filter = {
+      status: 'overdue',
+      $or: [
+        { priority: { $in: ['high', 'urgent'] } },
+        { title: { $regex: 'nba|criterion|accreditation', $options: 'i' } }
+      ]
+    };
+    explanation = `Identified high/urgent priority deliverables that are past their due dates and require immediate intervention.`;
+  }
+  // Question B: "What work is pending with the CSE department?"
+  else if (qLower.includes('pending') && (qLower.includes('cse') || qLower.includes('computer'))) {
+    queryCategory = 'department_pending';
+    filter = {
+      department: 'CSE',
+      status: { $in: ['pending', 'in-progress'] }
+    };
+    explanation = `Filtered active and pending deliverables assigned to the CSE Department.`;
+  }
+  // Question C: "Which faculty have tasks due this week?"
+  else if (qLower.includes('due this week') || qLower.includes('faculty') || qLower.includes('this week')) {
+    queryCategory = 'due_this_week';
+    const weekAhead = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    filter = {
+      dueDate: { $gte: now, $lte: weekAhead },
+      status: { $ne: 'completed' }
+    };
+    explanation = `Showing upcoming deliverables due within the next 7 days across faculty and staff.`;
+  }
+  // Question D: "Prepare today's task summary for me"
+  else if (qLower.includes('today') || qLower.includes('summary') || qLower.includes('briefing')) {
+    queryCategory = 'today_summary';
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+    filter = {
+      $or: [
+        { dueDate: { $gte: startOfDay, $lte: endOfDay } },
+        { status: 'overdue' },
+        { status: 'in-progress' }
+      ]
+    };
+    explanation = `Generated today's operational briefing: items due today, active items in-progress, and overdue escalations.`;
+  }
+  // General query fallback
+  else {
+    queryCategory = 'keyword_search';
+    filter = {
+      $or: [
+        { title: { $regex: qLower, $options: 'i' } },
+        { description: { $regex: qLower, $options: 'i' } },
+        { department: { $regex: qLower, $options: 'i' } },
+        { priority: { $regex: qLower, $options: 'i' } },
+        { taskId: { $regex: qLower, $options: 'i' } },
+      ]
+    };
+    explanation = `Grounded query results matching: "${queryText}".`;
+  }
+
+  const tasks = await Task.find(filter)
+    .populate('assignee', 'name email role department')
+    .populate('creator', 'name email')
+    .sort({ dueDate: 1 });
+
+  return {
+    query: queryText,
+    category: queryCategory,
+    explanation,
+    matchCount: tasks.length,
+    tasks,
+  };
+};
+
 module.exports = {
   parseEmailToTask,
   generateSubtasks,
   analyzePriorityAndDeadline,
   generateTaskSummary,
+  queryCommandCenter,
 };
 

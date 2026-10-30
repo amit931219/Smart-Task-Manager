@@ -15,7 +15,7 @@ const MetricCards = ({ metrics }) => {
       title: 'In Progress',
       value: metrics.inProgressTasks || 0,
       icon: Clock,
-      subtitle: 'Active execution',
+      subtitle: metrics.dueTodayTasks ? `${metrics.dueTodayTasks} due today` : 'Active execution',
     },
     {
       title: 'Overdue Tasks',

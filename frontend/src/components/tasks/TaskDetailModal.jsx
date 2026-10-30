@@ -5,6 +5,8 @@ import {
   Trash2,
   Mail,
   Plus,
+  CheckCircle2,
+  Percent,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -16,9 +18,12 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
   const [newSubtask, setNewSubtask] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingProgress, setEditingProgress] = useState(false);
+  const [progressVal, setProgressVal] = useState(task?.progress || 0);
 
   React.useEffect(() => {
     setCurrentTask(task);
+    setProgressVal(task?.progress || 0);
   }, [task]);
 
   if (!isOpen || !currentTask) return null;
@@ -28,6 +33,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
     try {
       const res = await api.patch(`/tasks/${currentTask._id}/subtasks/${subtaskId}`);
       setCurrentTask(res.data.data);
+      setProgressVal(res.data.data.progress || 0);
       if (onTaskUpdated) onTaskUpdated(res.data.data);
     } catch (err) {
       console.error('Failed to toggle subtask', err);
@@ -43,6 +49,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
         title: newSubtask.trim(),
       });
       setCurrentTask(res.data.data);
+      setProgressVal(res.data.data.progress || 0);
       setNewSubtask('');
       if (onTaskUpdated) onTaskUpdated(res.data.data);
     } catch (err) {
@@ -58,11 +65,28 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
     try {
       const res = await api.patch(`/tasks/${currentTask._id}/status`, { status: newStatus });
       setCurrentTask(res.data.data);
+      setProgressVal(newStatus === 'completed' ? 100 : res.data.data.progress || 0);
       if (onTaskUpdated) onTaskUpdated(res.data.data);
     } catch (err) {
       console.error('Failed to change status', err);
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  // Update Progress manually (Point 2: [Update Progress])
+  const handleSaveProgress = async () => {
+    try {
+      const p = Math.max(0, Math.min(100, Number(progressVal)));
+      const res = await api.put(`/tasks/${currentTask._id}`, {
+        progress: p,
+        status: p === 100 ? 'completed' : currentTask.status === 'completed' ? 'in-progress' : currentTask.status,
+      });
+      setCurrentTask(res.data.data);
+      setEditingProgress(false);
+      if (onTaskUpdated) onTaskUpdated(res.data.data);
+    } catch (err) {
+      console.error('Failed to update progress', err);
     }
   };
 
@@ -99,6 +123,11 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
         <div className="flex items-start justify-between pb-3.5 border-b border-slate-100 gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+              {currentTask.taskId && (
+                <span className="text-[11px] font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                  {currentTask.taskId}
+                </span>
+              )}
               <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.2 rounded border ${priorityStyles[currentTask.priority] || priorityStyles.medium}`}>
                 {currentTask.priority}
               </span>
@@ -121,7 +150,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
           </button>
         </div>
 
-        {/* Status Bar */}
+        {/* Status & Deadline Bar */}
         <div className="mt-3.5 p-2.5 bg-slate-50 border border-slate-200/70 rounded-lg flex items-center justify-between flex-wrap gap-2 text-xs">
           <div className="flex items-center gap-2">
             <span className="text-slate-500 font-medium">Status:</span>
@@ -147,10 +176,74 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
           </div>
         </div>
 
+        {/* Progress Tracking Bar (Point 2 & 3: [Update Progress] [Mark Complete]) */}
+        <div className="mt-3.5 p-3 rounded-lg bg-slate-50 border border-slate-200/80">
+          <div className="flex items-center justify-between mb-1.5 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-slate-800">Task Completion:</span>
+              <span className="font-bold text-slate-900 tabular-nums">{progressVal}%</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {currentTask.status !== 'completed' && (
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('completed')}
+                  className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-medium flex items-center gap-1 transition-colors"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Mark Complete</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingProgress(!editingProgress)}
+                className="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded text-[11px] font-medium transition-colors"
+              >
+                {editingProgress ? 'Cancel' : 'Update Progress'}
+              </button>
+            </div>
+          </div>
+
+          {editingProgress ? (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={progressVal}
+                onChange={(e) => setProgressVal(e.target.value)}
+                className="flex-1 accent-slate-900 cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={handleSaveProgress}
+                className="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-medium"
+              >
+                Save
+              </button>
+            </div>
+          ) : (
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-1">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progressVal === 100
+                    ? 'bg-emerald-500'
+                    : progressVal > 50
+                    ? 'bg-sky-600'
+                    : 'bg-slate-700'
+                }`}
+                style={{ width: `${progressVal}%` }}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Description */}
         <div className="mt-4">
           <h4 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-            Description
+            Description & Context
           </h4>
           <p className="text-xs text-slate-700 bg-slate-50/60 border border-slate-200/60 p-3 rounded-lg whitespace-pre-wrap leading-relaxed">
             {currentTask.description || 'No detailed description provided.'}
@@ -160,7 +253,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
         {/* Subtask Checklist */}
         <div className="mt-4">
           <h4 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Checklist ({currentTask.subtasks?.length || 0})
+            Subtask Checklist ({currentTask.subtasks?.length || 0})
           </h4>
 
           <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
@@ -214,7 +307,7 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
           </div>
         </div>
 
-        {/* Metadata Grid */}
+        {/* Origin & Creator Info (Point 1 & 4) */}
         <div className="mt-4 pt-3.5 border-t border-slate-100 grid grid-cols-2 gap-3 text-xs">
           <div>
             <span className="text-slate-400 text-[11px]">Assignee</span>
@@ -224,11 +317,13 @@ const TaskDetailModal = ({ task, isOpen, onClose, onTaskUpdated, onTaskDeleted }
             <p className="text-[10px] text-slate-400 truncate">{currentTask.assignee?.email}</p>
           </div>
           <div>
-            <span className="text-slate-400 text-[11px]">Origin</span>
+            <span className="text-slate-400 text-[11px]">Created By</span>
             <p className="font-medium text-slate-800 mt-0.5 truncate">
-              {currentTask.creator?.name || 'System / Gmail Automated'}
+              {currentTask.creator?.name || 'System / Central Gmail'}
             </p>
-            <p className="text-[10px] text-slate-400">Created via {currentTask.source || 'Manual entry'}</p>
+            <p className="text-[10px] text-slate-400">
+              {new Date(currentTask.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+            </p>
           </div>
         </div>
 

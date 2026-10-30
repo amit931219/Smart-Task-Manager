@@ -93,7 +93,11 @@ const DraftReviewCard = ({ draft, users = [], onApproved, onRejected }) => {
         </div>
 
         <div>
-          {isPending ? (
+          {draft.extractedTask?.isTaskReply ? (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              Task Reply Sync ({draft.extractedTask.replyTaskId})
+            </span>
+          ) : isPending ? (
             <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
               Awaiting Approval
             </span>

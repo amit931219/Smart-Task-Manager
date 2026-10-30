@@ -136,6 +136,24 @@ const processEmailMessage = async ({ messageId, from, subject, body, receivedAt 
   // Run through AI Email-to-Task converter
   const extracted = await aiService.parseEmailToTask(subject, cleanBody);
 
+  // If this email is a reply confirming completion of an existing Task ID (Point 10)
+  if (extracted.isTaskReply && extracted.replyTaskId) {
+    const Task = require('../models/Task');
+    const existingTask = await Task.findOne({ taskId: extracted.replyTaskId });
+    if (existingTask) {
+      existingTask.status = 'completed';
+      existingTask.progress = 100;
+      existingTask.completedAt = new Date();
+      await existingTask.save();
+
+      await logActivity({
+        task: existingTask._id,
+        action: 'UPDATED_STATUS',
+        details: `Task ${existingTask.taskId} ("${existingTask.title}") automatically marked COMPLETED via email reply from ${from}`,
+      });
+    }
+  }
+
   const draft = await EmailDraft.create({
     messageId,
     from,
@@ -143,7 +161,7 @@ const processEmailMessage = async ({ messageId, from, subject, body, receivedAt 
     body: cleanBody,
     receivedAt: receivedAt || new Date(),
     extractedTask: extracted,
-    status: 'pending_review',
+    status: extracted.isTaskReply ? 'approved' : 'pending_review',
   });
 
   await logActivity({
