@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import {
-  History,
-  CheckCircle,
+  CheckCircle2,
   Mail,
   Sparkles,
   AlertTriangle,
   User,
-  Filter,
   RefreshCw,
 } from 'lucide-react';
 
@@ -43,46 +41,41 @@ const ActivityHistoryPage = () => {
       case 'EMAIL_DRAFT_APPROVED':
         return {
           icon: Mail,
-          bg: 'bg-purple-100 text-purple-700',
-          border: 'border-purple-200',
+          bg: 'bg-purple-50 text-purple-700 border-purple-200',
         };
       case 'AI_SUBTASKS_ADDED':
       case 'AI_PRIORITY_APPLIED':
         return {
           icon: Sparkles,
-          bg: 'bg-blue-100 text-blue-700',
-          border: 'border-blue-200',
+          bg: 'bg-sky-50 text-sky-700 border-sky-200',
         };
       case 'OVERDUE_ALERT_SENT':
         return {
           icon: AlertTriangle,
-          bg: 'bg-red-100 text-red-700',
-          border: 'border-red-200',
+          bg: 'bg-rose-50 text-rose-700 border-rose-200',
         };
       case 'UPDATED_STATUS':
         return {
-          icon: CheckCircle,
-          bg: 'bg-emerald-100 text-emerald-700',
-          border: 'border-emerald-200',
+          icon: CheckCircle2,
+          bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         };
       default:
         return {
           icon: User,
-          bg: 'bg-slate-100 text-slate-700',
-          border: 'border-slate-200',
+          bg: 'bg-slate-100 text-slate-700 border-slate-200',
         };
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 border-b border-slate-200/70">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Activity & Audit History
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            Audit Trail & Event Log
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Immutable log of all user updates, AI operations, and Gmail conversions.
+          <p className="text-xs text-slate-500 mt-1">
+            Immutable system record of user operations, automated Gmail conversions, and AI telemetry.
           </p>
         </div>
 
@@ -94,29 +87,29 @@ const ActivityHistoryPage = () => {
               setActionFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
-            <option value="">All Event Types</option>
+            <option value="">All Event Categories</option>
             <option value="CREATED_TASK">Task Created</option>
             <option value="UPDATED_STATUS">Status Updated</option>
             <option value="GMAIL_SYNCED">Gmail Synced</option>
             <option value="EMAIL_DRAFT_APPROVED">Email Task Approved</option>
             <option value="OVERDUE_ALERT_SENT">Overdue Alert Sent</option>
             <option value="AI_SUBTASKS_ADDED">AI Subtasks Generated</option>
-            <option value="USER_LOGIN">User Logins</option>
+            <option value="USER_LOGIN">User Authentications</option>
           </select>
         </div>
       </div>
 
       {/* Main Table / Timeline */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-subtle overflow-hidden text-xs">
         {loading ? (
           <div className="p-12 flex items-center justify-center">
-            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+            <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
           </div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
-            No activity logs match your filter.
+            No audit records matching selected filter criteria.
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -126,36 +119,36 @@ const ActivityHistoryPage = () => {
               return (
                 <div
                   key={log._id}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
+                  className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-xl ${badge.bg} shrink-0 mt-0.5`}>
-                      <Icon className="w-4 h-4" />
+                    <div className={`p-1.5 rounded-md border ${badge.bg} shrink-0 mt-0.5`}>
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span
-                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${badge.bg} ${badge.border}`}
+                          className={`text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded border ${badge.bg}`}
                         >
                           {log.action.replace(/_/g, ' ')}
                         </span>
-                        <span className="font-semibold text-slate-800">
-                          {log.user?.name || 'System Automation'}
+                        <span className="font-medium text-slate-900">
+                          {log.user?.name || 'System Daemon'}
                         </span>
                         {log.user?.department && (
                           <span className="text-[10px] text-slate-400">
-                            ({log.user.department})
+                            • {log.user.department}
                           </span>
                         )}
                       </div>
-                      <p className="text-slate-700 font-medium leading-relaxed">
+                      <p className="text-slate-700 leading-snug">
                         {log.details}
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0 text-slate-400 text-[11px] self-end sm:self-center">
-                    {new Date(log.createdAt).toLocaleString()}
+                  <div className="text-right shrink-0 text-slate-400 text-[11px] self-end sm:self-center tabular-nums">
+                    {new Date(log.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                   </div>
                 </div>
               );
@@ -166,7 +159,7 @@ const ActivityHistoryPage = () => {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-slate-600">
+        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
           <span>
             Page {page} of {totalPages}
           </span>
@@ -174,14 +167,14 @@ const ActivityHistoryPage = () => {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg border border-slate-300 disabled:opacity-50 hover:bg-slate-100"
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-50 transition-colors shadow-subtle"
             >
               Previous
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-lg border border-slate-300 disabled:opacity-50 hover:bg-slate-100"
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-50 transition-colors shadow-subtle"
             >
               Next
             </button>
@@ -193,4 +186,3 @@ const ActivityHistoryPage = () => {
 };
 
 export default ActivityHistoryPage;
-

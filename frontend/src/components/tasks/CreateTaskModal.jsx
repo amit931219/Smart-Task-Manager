@@ -4,10 +4,7 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  Calendar,
   AlertCircle,
-  CheckCircle2,
-  Zap,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -34,7 +31,6 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // Fetch users for assignee dropdown
       const loadUsers = async () => {
         try {
           const res = await api.get('/auth/users');
@@ -52,7 +48,6 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
       };
       loadUsers();
 
-      // Default due date to 3 days from now
       const defaultDate = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
       setFormData((prev) => ({ ...prev, dueDate: defaultDate }));
     }
@@ -72,7 +67,6 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
     });
   };
 
-  // Add custom subtask manually
   const handleAddSubtask = () => {
     if (!newSubtaskInput.trim()) return;
     setSubtasks((prev) => [
@@ -170,74 +164,74 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-modal max-w-xl w-full p-6 relative border border-slate-200/90 animate-in fade-in duration-150 my-8">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Create New Task</h3>
-            <p className="text-xs text-slate-500">
-              Assign task with AI-assisted subtasks and deadline analysis
+            <h3 className="text-base font-semibold text-slate-900 tracking-tight">Create Task</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Assign workload item with AI-assisted breakdown and feasibility assessment
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+          <div className="mt-3.5 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
           {/* Title */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Task Title <span className="text-red-500">*</span>
+            <label className="block font-medium text-slate-700 mb-1">
+              Task Title <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
-              placeholder="e.g. Prepare the annual department report"
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., Finalize syllabus revision and lab guidelines"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors"
               required
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Description / Deliverables
+            <label className="block font-medium text-slate-700 mb-1">
+              Deliverables & Context
             </label>
             <textarea
               name="description"
-              rows={3}
+              rows={2}
               value={formData.description}
               onChange={handleChange}
-              placeholder="Outline specific objectives and guidelines..."
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Provide context, required outcomes, and reference links..."
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors"
             />
           </div>
 
           {/* Row: Assignee & Department */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Assignee <span className="text-red-500">*</span>
+              <label className="block font-medium text-slate-700 mb-1">
+                Assignee <span className="text-rose-500">*</span>
               </label>
               <select
                 name="assignee"
                 value={formData.assignee}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 required
               >
                 {users.map((u) => (
@@ -249,7 +243,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block font-medium text-slate-700 mb-1">
                 Department
               </label>
               <input
@@ -257,45 +251,45 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
           </div>
 
           {/* Row: Due Date & Priority with AI evaluation */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Due Date <span className="text-red-500">*</span>
+              <label className="block font-medium text-slate-700 mb-1">
+                Due Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 name="dueDate"
                 value={formData.dueDate}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 required
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">Priority</label>
+                <label className="font-medium text-slate-700">Priority</label>
                 <button
                   type="button"
                   onClick={handleAnalyzePriorityAI}
                   disabled={analyzingPriority}
-                  className="text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                  className="text-[11px] text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition-colors"
                 >
-                  <Sparkles className="w-3 h-3 text-blue-500" />
-                  {analyzingPriority ? 'Analyzing...' : 'AI Risk Check'}
+                  <Sparkles className="w-3 h-3 text-sky-600" />
+                  {analyzingPriority ? 'Assessing...' : 'AI Risk Check'}
                 </button>
               </div>
               <select
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 capitalize"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white text-slate-900 capitalize focus:outline-none focus:ring-2 focus:ring-slate-900"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -305,25 +299,25 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
             </div>
           </div>
 
-          {/* AI Priority & Deadline Suggestion Banner */}
+          {/* AI Priority & Deadline Suggestion Callout */}
           {aiAnalysisResult && (
-            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
-              <div className="flex items-start justify-between gap-2">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <Sparkles className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-blue-900">AI Deadline Assessment: </span>
-                    <span className="text-blue-800">{aiAnalysisResult.reasoning}</span>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-slate-600">
+                    <span className="font-semibold text-slate-900">Deadline Assessment: </span>
+                    <span className="text-slate-700">{aiAnalysisResult.reasoning}</span>
+                    <div className="mt-1 flex items-center gap-2 text-[11px]">
+                      <span className="text-slate-500">
                         Suggested Priority:{' '}
-                        <strong className="uppercase text-blue-700">
+                        <strong className="uppercase text-slate-900 font-semibold">
                           {aiAnalysisResult.suggestedPriority}
                         </strong>
                       </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-slate-600">
-                        Risk Score: <strong>{aiAnalysisResult.riskScore}/100</strong>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-500">
+                        Risk Score: <strong className="text-slate-900 font-semibold">{aiAnalysisResult.riskScore}/100</strong>
                       </span>
                     </div>
                   </div>
@@ -332,9 +326,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
                 <button
                   type="button"
                   onClick={applySuggestedPriority}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-[11px] shrink-0"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-md text-[11px] shrink-0 transition-colors shadow-subtle"
                 >
-                  Apply Suggestion
+                  Apply
                 </button>
               </div>
             </div>
@@ -343,44 +337,44 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
           {/* Subtasks Section with AI Subtask Generator */}
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-slate-700">
-                Actionable Subtasks ({subtasks.length})
+              <label className="font-medium text-slate-700">
+                Action Items ({subtasks.length})
               </label>
               <button
                 type="button"
                 onClick={handleGenerateSubtasksAI}
                 disabled={generatingSubtasks}
-                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-200 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors shadow-subtle disabled:opacity-60"
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                <span>{generatingSubtasks ? 'AI Generating...' : '⚡ Suggest Subtasks with AI'}</span>
+                <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                <span>{generatingSubtasks ? 'Analyzing...' : 'Suggest Subtasks with AI'}</span>
               </button>
             </div>
 
             {/* List of Subtasks */}
-            <div className="space-y-1.5 max-h-40 overflow-y-auto mb-2 pr-1">
+            <div className="space-y-1.5 max-h-36 overflow-y-auto mb-2 pr-1">
               {subtasks.length === 0 ? (
-                <div className="p-3 text-center text-xs text-slate-400 border border-dashed rounded-xl">
-                  No subtasks added yet. Use AI suggestions or add manually below.
+                <div className="p-3 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                  No subtasks added. Use AI suggestions or type manually below.
                 </div>
               ) : (
                 subtasks.map((st, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+                    className="flex items-center justify-between gap-2 p-2 rounded-md bg-slate-50 border border-slate-200/80 text-xs"
                   >
                     <div className="flex items-center gap-2 truncate">
                       {st.suggestedByAI && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700 shrink-0">
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-sky-100 text-sky-800 border border-sky-200 shrink-0">
                           AI
                         </span>
                       )}
-                      <span className="text-slate-700 truncate">{st.title}</span>
+                      <span className="text-slate-800 truncate">{st.title}</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveSubtask(idx)}
-                      className="text-slate-400 hover:text-red-500 p-1"
+                      className="text-slate-400 hover:text-rose-600 p-0.5 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -401,13 +395,13 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
                     handleAddSubtask();
                   }
                 }}
-                placeholder="Add a custom subtask..."
-                className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Add subtask and press enter..."
+                className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
               <button
                 type="button"
                 onClick={handleAddSubtask}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1"
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" /> Add
               </button>
@@ -415,20 +409,20 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-semibold transition-colors"
+              className="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 text-xs font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-60"
+              className="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-subtle transition-colors disabled:opacity-60"
             >
-              {loading ? 'Creating...' : 'Create & Assign Task'}
+              {loading ? 'Creating...' : 'Create Task'}
             </button>
           </div>
         </form>
@@ -438,4 +432,3 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }) => {
 };
 
 export default CreateTaskModal;
-

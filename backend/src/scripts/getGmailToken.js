@@ -4,9 +4,11 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 
-const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REDIRECT_URI } = process.env;
+const rawClientId = process.env.GMAIL_CLIENT_ID ? process.env.GMAIL_CLIENT_ID.trim() : '';
+const rawClientSecret = process.env.GMAIL_CLIENT_SECRET ? process.env.GMAIL_CLIENT_SECRET.trim() : '';
+const rawRedirectUri = (process.env.GMAIL_REDIRECT_URI ? process.env.GMAIL_REDIRECT_URI.trim() : '') || 'http://localhost:5000/api/gmail/oauth2callback';
 
-if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {
+if (!rawClientId || !rawClientSecret) {
   console.error('\n❌ ERROR: GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are not set in backend/.env');
   console.log('Please add your Google Cloud OAuth credentials to backend/.env first:');
   console.log('  GMAIL_CLIENT_ID=your-client-id.apps.googleusercontent.com');
@@ -14,8 +16,8 @@ if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {
   process.exit(1);
 }
 
-const redirectUri = GMAIL_REDIRECT_URI || 'http://localhost:5000/api/gmail/oauth2callback';
-const oAuth2Client = new google.auth.OAuth2(GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, redirectUri);
+const redirectUri = rawRedirectUri;
+const oAuth2Client = new google.auth.OAuth2(rawClientId, rawClientSecret, redirectUri);
 
 const scopes = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -76,3 +78,4 @@ rl.question('Paste Authorization Code (or press Enter if authorized via browser)
     process.exit(1);
   }
 });
+

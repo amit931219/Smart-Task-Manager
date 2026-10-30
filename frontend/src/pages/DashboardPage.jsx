@@ -6,11 +6,11 @@ import ChartsSection from '../components/dashboard/ChartsSection';
 import UrgentAlertBanner from '../components/dashboard/UrgentAlertBanner';
 import RecentActivityList from '../components/dashboard/RecentActivityList';
 import CreateTaskModal from '../components/tasks/CreateTaskModal';
-import { Plus, Mail, Bot, RefreshCw, CheckSquare } from 'lucide-react';
+import { Plus, Mail, Bot, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const DashboardPage = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -34,8 +34,8 @@ const DashboardPage = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
-          <p className="text-sm font-semibold text-slate-600">Loading Smart Task Dashboard...</p>
+          <RefreshCw className="w-5 h-5 text-slate-500 animate-spin" />
+          <p className="text-xs font-medium text-slate-500">Loading operations overview...</p>
         </div>
       </div>
     );
@@ -43,39 +43,44 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Welcome & Actions Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 border-b border-slate-200/70">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Welcome back, {user?.name} 👋
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Overview of department workloads, automated Gmail tasks, and delivery milestones.
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+              Welcome back, {user?.name}
+            </h1>
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              {user?.department || 'Operations'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Real-time department workload telemetry, automated Gmail queues, and milestone risk tracking.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             to="/gmail"
-            className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-purple-200"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors shadow-subtle"
           >
-            <Mail className="w-4 h-4" />
-            <span>Gmail Inbox Hub</span>
+            <Mail className="w-3.5 h-3.5 text-slate-500" />
+            <span>Gmail Pipeline</span>
           </Link>
 
           <Link
             to="/ai-summary"
-            className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-200"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors shadow-subtle"
           >
-            <Bot className="w-4 h-4" />
-            <span>AI Summary</span>
+            <Bot className="w-3.5 h-3.5 text-slate-500" />
+            <span>Executive Report</span>
           </Link>
 
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors shadow-subtle"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>New Task</span>
           </button>
         </div>
@@ -113,4 +118,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

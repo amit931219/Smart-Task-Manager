@@ -8,18 +8,14 @@ import TaskDetailModal from '../components/tasks/TaskDetailModal';
 import {
   Plus,
   Search,
-  Filter,
   Kanban,
   List,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
 
 const TasksPage = () => {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,52 +75,48 @@ const TasksPage = () => {
     {
       id: 'pending',
       title: 'Pending',
-      color: 'bg-amber-500',
-      badge: 'bg-amber-100 text-amber-800',
+      dotColor: 'bg-amber-500',
       tasks: tasks.filter((t) => t.status === 'pending'),
     },
     {
       id: 'in-progress',
       title: 'In Progress',
-      color: 'bg-blue-500',
-      badge: 'bg-blue-100 text-blue-800',
+      dotColor: 'bg-sky-500',
       tasks: tasks.filter((t) => t.status === 'in-progress'),
     },
     {
       id: 'overdue',
       title: 'Overdue',
-      color: 'bg-red-500',
-      badge: 'bg-red-100 text-red-800',
+      dotColor: 'bg-rose-500',
       tasks: tasks.filter((t) => t.status === 'overdue'),
     },
     {
       id: 'completed',
       title: 'Completed',
-      color: 'bg-emerald-500',
-      badge: 'bg-emerald-100 text-emerald-800',
+      dotColor: 'bg-emerald-500',
       tasks: tasks.filter((t) => t.status === 'completed'),
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 border-b border-slate-200/70">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Task Management</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Organize, prioritize, and track deadlines across your team.
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Task Management</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Track workload execution, assignees, and delivery timelines across teams.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* View Mode Toggle */}
-          <div className="p-1 rounded-xl bg-slate-200 flex items-center gap-1 text-slate-600">
+        <div className="flex items-center gap-2">
+          {/* Segmented View Mode Toggle */}
+          <div className="p-0.5 rounded-lg bg-slate-100 border border-slate-200/80 flex items-center gap-0.5 text-slate-600">
             <button
               onClick={() => setViewMode('kanban')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
                 viewMode === 'kanban'
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-white text-slate-900 shadow-subtle'
                   : 'hover:text-slate-900'
               }`}
             >
@@ -133,9 +125,9 @@ const TasksPage = () => {
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
                 viewMode === 'list'
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-white text-slate-900 shadow-subtle'
                   : 'hover:text-slate-900'
               }`}
             >
@@ -146,35 +138,35 @@ const TasksPage = () => {
 
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors shadow-subtle"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>New Task</span>
           </button>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tasks by title, deliverables..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Search by title, keywords..."
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-colors"
           />
         </form>
 
-        {/* Filters */}
+        {/* Filter Controls */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium text-slate-700 focus:outline-none"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -187,7 +179,7 @@ const TasksPage = () => {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium text-slate-700 focus:outline-none"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
             <option value="all">All Priorities</option>
             <option value="low">Low</option>
@@ -200,9 +192,9 @@ const TasksPage = () => {
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium text-slate-700 focus:outline-none"
+            className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
-            <option value="All">All Depts</option>
+            <option value="All">All Departments</option>
             <option value="CSE">CSE</option>
             <option value="IT">IT</option>
             <option value="Management">Management</option>
@@ -213,10 +205,10 @@ const TasksPage = () => {
           <button
             type="button"
             onClick={() => setMyTasksOnly(!myTasksOnly)}
-            className={`px-3 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
               myTasksOnly
-                ? 'bg-blue-600 border-blue-600 text-white'
-                : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                ? 'bg-slate-900 border-slate-900 text-white'
+                : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'
             }`}
           >
             My Tasks Only
@@ -227,7 +219,7 @@ const TasksPage = () => {
       {/* Main View Area */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[40vh]">
-          <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+          <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
         </div>
       ) : viewMode === 'kanban' ? (
         /* Kanban Board View */
@@ -235,25 +227,25 @@ const TasksPage = () => {
           {kanbanColumns.map((col) => (
             <div
               key={col.id}
-              className="bg-slate-100/70 p-3.5 rounded-2xl border border-slate-200/80 min-h-[500px] flex flex-col"
+              className="bg-slate-100/70 p-3 rounded-xl border border-slate-200/80 min-h-[480px] flex flex-col"
             >
               {/* Column Header */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200/80">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${col.color}`}></span>
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700">
+                  <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                  <h3 className="font-semibold text-xs tracking-tight text-slate-800">
                     {col.title}
                   </h3>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${col.badge}`}>
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-white border border-slate-200 text-slate-600 tabular-nums">
                   {col.tasks.length}
                 </span>
               </div>
 
-              {/* Tasks List in Column */}
-              <div className="space-y-3 flex-1 overflow-y-auto">
+              {/* Tasks List */}
+              <div className="space-y-2.5 flex-1 overflow-y-auto">
                 {col.tasks.length === 0 ? (
-                  <div className="h-32 flex items-center justify-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-xl">
+                  <div className="h-28 flex items-center justify-center text-xs text-slate-400 border border-dashed border-slate-300/80 rounded-lg">
                     No {col.title.toLowerCase()} tasks
                   </div>
                 ) : (
@@ -271,24 +263,24 @@ const TasksPage = () => {
         </div>
       ) : (
         /* Table / List View */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-subtle overflow-hidden text-xs">
           <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-medium">
               <tr>
-                <th className="p-3.5">Task Title</th>
-                <th className="p-3.5">Assignee</th>
-                <th className="p-3.5">Status</th>
-                <th className="p-3.5">Priority</th>
-                <th className="p-3.5">Department</th>
-                <th className="p-3.5">Due Date</th>
-                <th className="p-3.5">Subtasks</th>
+                <th className="py-2.5 px-3.5">Title</th>
+                <th className="py-2.5 px-3.5">Assignee</th>
+                <th className="py-2.5 px-3.5">Status</th>
+                <th className="py-2.5 px-3.5">Priority</th>
+                <th className="py-2.5 px-3.5">Department</th>
+                <th className="py-2.5 px-3.5">Due Date</th>
+                <th className="py-2.5 px-3.5">Subtasks</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
-                    No tasks found matching your filters.
+                  <td colSpan={7} className="py-10 text-center text-slate-400">
+                    No tasks found matching your filter criteria.
                   </td>
                 </tr>
               ) : (
@@ -299,26 +291,26 @@ const TasksPage = () => {
                     <tr
                       key={t._id}
                       onClick={() => setSelectedTask(t)}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                      className="hover:bg-slate-50/70 cursor-pointer transition-colors"
                     >
-                      <td className="p-3.5 font-semibold text-slate-900">{t.title}</td>
-                      <td className="p-3.5 text-slate-700">{t.assignee?.name || 'Unassigned'}</td>
-                      <td className="p-3.5">
-                        <span className="capitalize px-2 py-0.5 rounded font-bold text-[11px] bg-slate-100 text-slate-700">
+                      <td className="py-2.5 px-3.5 font-medium text-slate-900">{t.title}</td>
+                      <td className="py-2.5 px-3.5 text-slate-600">{t.assignee?.name || 'Unassigned'}</td>
+                      <td className="py-2.5 px-3.5">
+                        <span className="capitalize px-1.5 py-0.2 rounded font-medium text-[10px] bg-slate-100 border border-slate-200 text-slate-700">
                           {t.status}
                         </span>
                       </td>
-                      <td className="p-3.5">
-                        <span className="uppercase px-2 py-0.5 rounded font-bold text-[10px] bg-blue-100 text-blue-700">
+                      <td className="py-2.5 px-3.5">
+                        <span className="uppercase px-1.5 py-0.2 rounded font-medium text-[10px] bg-sky-50 text-sky-700 border border-sky-200">
                           {t.priority}
                         </span>
                       </td>
-                      <td className="p-3.5 text-slate-600">{t.department}</td>
-                      <td className="p-3.5 text-slate-700 font-medium">
+                      <td className="py-2.5 px-3.5 text-slate-500">{t.department}</td>
+                      <td className="py-2.5 px-3.5 text-slate-700 font-medium tabular-nums">
                         {new Date(t.dueDate).toLocaleDateString()}
                       </td>
-                      <td className="p-3.5 text-slate-500">
-                        {totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : '-'}
+                      <td className="py-2.5 px-3.5 text-slate-500 tabular-nums">
+                        {totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : '—'}
                       </td>
                     </tr>
                   );
@@ -349,4 +341,3 @@ const TasksPage = () => {
 };
 
 export default TasksPage;
-

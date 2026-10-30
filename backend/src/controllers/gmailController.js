@@ -10,14 +10,29 @@ const { logActivity } = require('../services/activityService');
 // @access  Private
 const syncInbox = async (req, res, next) => {
   try {
-    const results = await gmailService.syncGmailInbox();
+    const result = await gmailService.syncGmailInbox();
+    const count = result.processedCount !== undefined ? result.processedCount : (Array.isArray(result) ? result.length : 0);
+    const total = result.totalChecked !== undefined ? result.totalChecked : count;
+
+    let message = '';
+    if (count > 0) {
+      message = `Gmail sync successful! Processed and parsed ${count} new email task(s). Review and approve below!`;
+    } else {
+      message = `Gmail connected & checked (${total} recent email(s) found). 0 new tasks to convert (emails may have already been synced into drafts below).`;
+    }
+
     res.json({
       success: true,
-      message: `Gmail sync completed. Processed ${results.length} email(s).`,
-      data: results,
+      message,
+      data: result.drafts || result,
+      meta: result,
     });
   } catch (error) {
-    next(error);
+    console.error('syncInbox Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: `Gmail API Error: ${error.message}. Please check your connection or re-authorize.`,
+    });
   }
 };
 
@@ -292,6 +307,76 @@ const oauth2Callback = async (req, res, next) => {
   }
 };
 
+// @desc    Update Gmail configuration directly (e.g. Refresh Token, Client ID)
+// @route   POST /api/gmail/config
+// @access  Private
+const updateGmailConfig = async (req, res, next) => {
+  try {
+    const { refreshToken, clientId, clientSecret, centralEmail } = req.body;
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = path.resolve(__dirname, '../../.env');
+
+    if (!fs.existsSync(envPath)) {
+      return res.status(500).json({ success: false, message: '.env file not found' });
+    }
+
+    let envContent = fs.readFileSync(envPath, 'utf8');
+
+    if (refreshToken !== undefined) {
+      process.env.GMAIL_REFRESH_TOKEN = refreshToken.trim();
+      if (envContent.includes('GMAIL_REFRESH_TOKEN=')) {
+        envContent = envContent.replace(/GMAIL_REFRESH_TOKEN=.*$/m, `GMAIL_REFRESH_TOKEN=${refreshToken.trim()}`);
+      } else {
+        envContent += `\nGMAIL_REFRESH_TOKEN=${refreshToken.trim()}`;
+      }
+    }
+
+    if (clientId) {
+      process.env.GMAIL_CLIENT_ID = clientId.trim();
+      if (envContent.includes('GMAIL_CLIENT_ID=')) {
+        envContent = envContent.replace(/GMAIL_CLIENT_ID=.*$/m, `GMAIL_CLIENT_ID=${clientId.trim()}`);
+      } else {
+        envContent += `\nGMAIL_CLIENT_ID=${clientId.trim()}`;
+      }
+    }
+
+    if (clientSecret) {
+      process.env.GMAIL_CLIENT_SECRET = clientSecret.trim();
+      if (envContent.includes('GMAIL_CLIENT_SECRET=')) {
+        envContent = envContent.replace(/GMAIL_CLIENT_SECRET=.*$/m, `GMAIL_CLIENT_SECRET=${clientSecret.trim()}`);
+      } else {
+        envContent += `\nGMAIL_CLIENT_SECRET=${clientSecret.trim()}`;
+      }
+    }
+
+    if (centralEmail) {
+      process.env.CENTRAL_GMAIL_USER = centralEmail.trim();
+      if (envContent.includes('CENTRAL_GMAIL_USER=')) {
+        envContent = envContent.replace(/CENTRAL_GMAIL_USER=.*$/m, `CENTRAL_GMAIL_USER=${centralEmail.trim()}`);
+      } else {
+        envContent += `\nCENTRAL_GMAIL_USER=${centralEmail.trim()}`;
+      }
+    }
+
+    fs.writeFileSync(envPath, envContent, 'utf8');
+
+    const isConnected = !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN);
+
+    res.json({
+      success: true,
+      message: 'Gmail configuration updated successfully!',
+      data: {
+        isOAuthConnected: isConnected,
+        mode: isConnected ? 'live_gmail_api' : 'interactive_simulator',
+        centralEmail: process.env.CENTRAL_GMAIL_USER,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   syncInbox,
   simulateEmail,
@@ -301,5 +386,6 @@ module.exports = {
   getStatus,
   getAuthUrl,
   oauth2Callback,
+  updateGmailConfig,
 };
 

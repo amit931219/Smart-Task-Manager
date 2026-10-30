@@ -1,61 +1,80 @@
 import React from 'react';
-import { History, CheckCircle, Mail, Sparkles, User, AlertTriangle } from 'lucide-react';
+import { History, CheckCircle2, Mail, Sparkles, User, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const RecentActivityList = ({ activities = [] }) => {
-  const getActionIcon = (action) => {
+  const getActionConfig = (action) => {
     switch (action) {
       case 'GMAIL_SYNCED':
       case 'EMAIL_DRAFT_APPROVED':
-        return <Mail className="w-3.5 h-3.5 text-purple-600" />;
+        return {
+          icon: Mail,
+          color: 'text-purple-600 bg-purple-50 border-purple-200/60',
+        };
       case 'AI_SUBTASKS_ADDED':
       case 'AI_PRIORITY_APPLIED':
-        return <Sparkles className="w-3.5 h-3.5 text-blue-600" />;
+        return {
+          icon: Sparkles,
+          color: 'text-sky-600 bg-sky-50 border-sky-200/60',
+        };
       case 'OVERDUE_ALERT_SENT':
-        return <AlertTriangle className="w-3.5 h-3.5 text-red-600" />;
+        return {
+          icon: AlertTriangle,
+          color: 'text-rose-600 bg-rose-50 border-rose-200/60',
+        };
       case 'UPDATED_STATUS':
-        return <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />;
+        return {
+          icon: CheckCircle2,
+          color: 'text-emerald-600 bg-emerald-50 border-emerald-200/60',
+        };
       default:
-        return <User className="w-3.5 h-3.5 text-slate-500" />;
+        return {
+          icon: User,
+          color: 'text-slate-600 bg-slate-50 border-slate-200/60',
+        };
     }
   };
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-subtle">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
         <div>
-          <h3 className="text-base font-semibold text-slate-900">Recent Activity & Audit Trail</h3>
-          <p className="text-xs text-slate-500">Live operational events logged in MongoDB</p>
+          <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Audit Trail & Operational Events</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Automated workflow logs and team state updates</p>
         </div>
         <Link
           to="/activity"
-          className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
+          className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors"
         >
-          <span>View All Logs</span>
+          <span>View Audit Log</span>
+          <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
         </Link>
       </div>
 
       <div className="divide-y divide-slate-100">
         {activities.length === 0 ? (
-          <p className="py-6 text-center text-xs text-slate-400">No activity recorded yet</p>
+          <p className="py-8 text-center text-xs text-slate-400">No recent events recorded</p>
         ) : (
-          activities.map((act) => (
-            <div key={act._id} className="py-3 flex items-start gap-3">
-              <div className="p-1.5 rounded-lg bg-slate-100 mt-0.5">
-                {getActionIcon(act.action)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-slate-800 leading-snug">
-                  {act.details}
-                </p>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                  <span>{act.user?.name || 'System Auto-Agent'}</span>
-                  <span>•</span>
-                  <span>{new Date(act.createdAt).toLocaleString()}</span>
+          activities.map((act) => {
+            const { icon: Icon, color } = getActionConfig(act.action);
+            return (
+              <div key={act._id} className="py-2.5 flex items-start gap-3 group">
+                <div className={`p-1.5 rounded-md border ${color} shrink-0 mt-0.5`}>
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-800 leading-snug">
+                    {act.details}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+                    <span className="font-medium text-slate-500">{act.user?.name || 'Automated Daemon'}</span>
+                    <span>•</span>
+                    <span className="tabular-nums">{new Date(act.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
@@ -63,4 +82,3 @@ const RecentActivityList = ({ activities = [] }) => {
 };
 
 export default RecentActivityList;
-

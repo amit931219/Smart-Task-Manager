@@ -8,6 +8,7 @@ const {
   getStatus,
   getAuthUrl,
   oauth2Callback,
+  updateGmailConfig,
 } = require('../controllers/gmailController');
 const { protect } = require('../middlewares/auth');
 
@@ -21,6 +22,7 @@ router.get('/auth-url', getAuthUrl);
 router.use(protect);
 
 router.get('/status', getStatus);
+router.post('/config', updateGmailConfig);
 router.post('/sync', syncInbox);
 router.post('/simulate', simulateEmail);
 router.get('/drafts', getDrafts);
