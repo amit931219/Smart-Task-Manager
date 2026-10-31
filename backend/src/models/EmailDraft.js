@@ -9,15 +9,18 @@ const emailDraftSchema = new mongoose.Schema(
     },
     from: {
       type: String,
-      required: true,
+      default: 'unknown@domain.com',
+      trim: true,
     },
     subject: {
       type: String,
-      required: true,
+      default: '(No Subject)',
+      trim: true,
+      set: (v) => (!v || !String(v).trim() ? '(No Subject)' : String(v).trim()),
     },
     body: {
       type: String,
-      required: true,
+      default: '',
     },
     receivedAt: {
       type: Date,
@@ -26,7 +29,9 @@ const emailDraftSchema = new mongoose.Schema(
     extractedTask: {
       title: {
         type: String,
-        required: true,
+        default: 'New Task from Email',
+        trim: true,
+        set: (v) => (!v || !String(v).trim() ? 'New Task from Email' : String(v).trim()),
       },
       description: {
         type: String,

@@ -250,11 +250,20 @@ const processEmailMessage = async ({ messageId, from, subject, body, receivedAt,
     return existing;
   }
 
-  // Clean and prepare body text
-  const cleanBody = (body || '').trim() || subject;
+  // Ensure safe, non-empty values
+  const cleanSubject = (subject && typeof subject === 'string' && subject.trim())
+    ? subject.trim()
+    : '(No Subject)';
+  const cleanFrom = (from && typeof from === 'string' && from.trim())
+    ? from.trim()
+    : 'unknown@domain.com';
+  const cleanBody = (body || '').trim() || cleanSubject;
 
   // Run through AI Email-to-Task converter
-  const extracted = await aiService.parseEmailToTask(subject, cleanBody);
+  const extracted = await aiService.parseEmailToTask(cleanSubject, cleanBody);
+  if (!extracted.title || !extracted.title.trim()) {
+    extracted.title = cleanSubject !== '(No Subject)' ? cleanSubject : 'New Task from Email';
+  }
 
   // If this email is a reply confirming completion of an existing Task ID (Point 10)
   if (extracted.isTaskReply && extracted.replyTaskId) {
@@ -269,15 +278,15 @@ const processEmailMessage = async ({ messageId, from, subject, body, receivedAt,
       await logActivity({
         task: existingTask._id,
         action: 'UPDATED_STATUS',
-        details: `Task ${existingTask.taskId} ("${existingTask.title}") automatically marked COMPLETED via email reply from ${from}`,
+        details: `Task ${existingTask.taskId} ("${existingTask.title}") automatically marked COMPLETED via email reply from ${cleanFrom}`,
       });
     }
   }
 
   const draft = await EmailDraft.create({
     messageId,
-    from,
-    subject,
+    from: cleanFrom,
+    subject: cleanSubject,
     body: cleanBody,
     receivedAt: receivedAt || new Date(),
     attachments: attachments || [],
@@ -287,7 +296,7 @@ const processEmailMessage = async ({ messageId, from, subject, body, receivedAt,
 
   await logActivity({
     action: 'GMAIL_SYNCED',
-    details: `Synced email "${subject}" from ${from} and parsed candidate task "${extracted.title}"${attachments.length > 0 ? ` (${attachments.length} attachment(s))` : ''}`,
+    details: `Synced email "${cleanSubject}" from ${cleanFrom} and parsed candidate task "${extracted.title}"${attachments.length > 0 ? ` (${attachments.length} attachment(s))` : ''}`,
     metadata: { messageId, draftId: draft._id },
   });
 
@@ -339,68 +348,77 @@ const fetchLiveGmailEmails = async () => {
   const processedDrafts = [];
 
   for (const msg of messageRefs) {
-    // Check if this email was already converted to a draft
-    const alreadyProcessed = await EmailDraft.findOne({ messageId: msg.id });
-    if (alreadyProcessed) {
-      // If draft exists but attachments were not captured in an earlier run, backfill them from Gmail
-      if (!alreadyProcessed.attachments || alreadyProcessed.attachments.length === 0) {
-        try {
-          const detail = await gmail.users.messages.get({
-            userId: 'me',
-            id: msg.id,
-            format: 'full',
-          });
-          const attachments = await downloadAndSaveAttachments(gmail, msg.id, detail.data.payload);
-          if (attachments && attachments.length > 0) {
-            alreadyProcessed.attachments = attachments;
-            await alreadyProcessed.save();
-            console.log(`[GmailService] Backfilled ${attachments.length} attachment(s) for draft ${msg.id}`);
+    try {
+      // Check if this email was already converted to a draft
+      const alreadyProcessed = await EmailDraft.findOne({ messageId: msg.id });
+      if (alreadyProcessed) {
+        // If draft exists but attachments were not captured in an earlier run, backfill them from Gmail
+        if (!alreadyProcessed.attachments || alreadyProcessed.attachments.length === 0) {
+          try {
+            const detail = await gmail.users.messages.get({
+              userId: 'me',
+              id: msg.id,
+              format: 'full',
+            });
+            const attachments = await downloadAndSaveAttachments(gmail, msg.id, detail.data.payload);
+            if (attachments && attachments.length > 0) {
+              alreadyProcessed.attachments = attachments;
+              await alreadyProcessed.save();
+              console.log(`[GmailService] Backfilled ${attachments.length} attachment(s) for draft ${msg.id}`);
 
-            if (alreadyProcessed.processedTaskId) {
-              const Task = require('../models/Task');
-              await Task.findByIdAndUpdate(alreadyProcessed.processedTaskId, {
-                $set: { attachments: attachments },
-              });
-              console.log(`[GmailService] Updated task ${alreadyProcessed.processedTaskId} with backfilled attachments.`);
+              if (alreadyProcessed.processedTaskId) {
+                const Task = require('../models/Task');
+                await Task.findByIdAndUpdate(alreadyProcessed.processedTaskId, {
+                  $set: { attachments: attachments },
+                });
+                console.log(`[GmailService] Updated task ${alreadyProcessed.processedTaskId} with backfilled attachments.`);
+              }
             }
+          } catch (backfillErr) {
+            console.warn(`[GmailService] Could not backfill attachments for ${msg.id}:`, backfillErr.message);
           }
-        } catch (backfillErr) {
-          console.warn(`[GmailService] Could not backfill attachments for ${msg.id}:`, backfillErr.message);
         }
+        console.log(`[GmailService] Message ${msg.id} already exists as draft. Skipping.`);
+        continue;
       }
-      console.log(`[GmailService] Message ${msg.id} already exists as draft. Skipping.`);
-      continue;
+
+      const detail = await gmail.users.messages.get({
+        userId: 'me',
+        id: msg.id,
+        format: 'full',
+      });
+
+      const headers = detail.data.payload?.headers || [];
+      const subjectHeader = headers.find((h) => h.name && h.name.toLowerCase() === 'subject');
+      const fromHeader = headers.find((h) => h.name && h.name.toLowerCase() === 'from');
+
+      const rawSubject = (subjectHeader && subjectHeader.value) ? String(subjectHeader.value).trim() : '';
+      const subject = rawSubject || '(No Subject)';
+      const from = (fromHeader && fromHeader.value && String(fromHeader.value).trim())
+        ? String(fromHeader.value).trim()
+        : 'unknown@domain.com';
+      const bodyText = extractBodyFromPayload(detail.data.payload) || detail.data.snippet || subject;
+
+      // Extract, download and preserve attachments from the Gmail message payload
+      const attachments = await downloadAndSaveAttachments(gmail, msg.id, detail.data.payload);
+
+      console.log(`[GmailService] Parsing new email into task draft: "${subject}" from ${from} (${attachments.length} attachment(s))`);
+
+      const draft = await processEmailMessage({
+        messageId: msg.id,
+        from,
+        subject,
+        body: bodyText,
+        receivedAt: new Date(Number(detail.data.internalDate) || Date.now()),
+        attachments,
+      });
+
+      if (draft) {
+        processedDrafts.push(draft);
+      }
+    } catch (msgErr) {
+      console.error(`[GmailService] Error processing email message ${msg.id}:`, msgErr.message);
     }
-
-    const detail = await gmail.users.messages.get({
-      userId: 'me',
-      id: msg.id,
-      format: 'full',
-    });
-
-    const headers = detail.data.payload?.headers || [];
-    const subjectHeader = headers.find((h) => h.name.toLowerCase() === 'subject');
-    const fromHeader = headers.find((h) => h.name.toLowerCase() === 'from');
-
-    const subject = subjectHeader ? subjectHeader.value : '(No Subject)';
-    const from = fromHeader ? fromHeader.value : 'unknown@domain.com';
-    const bodyText = extractBodyFromPayload(detail.data.payload) || detail.data.snippet || subject;
-
-    // Extract, download and preserve attachments from the Gmail message payload
-    const attachments = await downloadAndSaveAttachments(gmail, msg.id, detail.data.payload);
-
-    console.log(`[GmailService] Parsing new email into task draft: "${subject}" from ${from} (${attachments.length} attachment(s))`);
-
-    const draft = await processEmailMessage({
-      messageId: msg.id,
-      from,
-      subject,
-      body: bodyText,
-      receivedAt: new Date(Number(detail.data.internalDate) || Date.now()),
-      attachments,
-    });
-
-    processedDrafts.push(draft);
   }
 
   return {

@@ -116,9 +116,16 @@ const extractTaskHeuristic = async (emailSubject, emailBody) => {
       }
     }
 
-    if (!title || title.length < 5) {
-      title = emailSubject.replace(/^(re:|fwd:)\s*/i, '').trim();
+    if (!title || title.length < 3) {
+      const safeSubject = emailSubject && typeof emailSubject === 'string'
+        ? emailSubject.replace(/^(re:|fwd:)\s*/i, '').trim()
+        : '';
+      title = safeSubject || 'New Task from Email';
     }
+  }
+
+  if (!title || !title.trim()) {
+    title = 'New Task from Email';
   }
 
   // Capitalize first letter of title
